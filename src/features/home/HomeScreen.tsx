@@ -1,22 +1,46 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
+import { useWallet } from '@/features/wallet/WalletProvider';
 
 export default function HomeScreen() {
+  const { balance } = useWallet();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>홈</Text>
-    </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.balanceCard}>
+        <Text style={styles.balanceLabel}>보유 금</Text>
+        <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
+        <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
+    padding: 16,
   },
-  text: {
+  balanceCard: {
+    backgroundColor: '#FFF6DB',
+    borderRadius: 16,
+    padding: 20,
+    gap: 4,
+  },
+  balanceLabel: {
+    fontSize: 14,
+    color: '#8A6D00',
+  },
+  balanceGold: {
     fontSize: 24,
     fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  balanceKrw: {
+    fontSize: 16,
+    color: '#60646C',
   },
 });
