@@ -7,6 +7,10 @@ export default function RootLayout() {
     <WalletProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="ad"
+          options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }}
+        />
       </Stack>
     </WalletProvider>
   );
