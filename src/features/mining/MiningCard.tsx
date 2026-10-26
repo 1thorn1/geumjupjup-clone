@@ -5,12 +5,16 @@ import { formatGold } from '@/features/wallet/gold';
 import { useMining } from './useMining';
 
 export function MiningCard() {
-  const { mined, isFull } = useMining();
+  const { mined, isFull, isLoading } = useMining();
 
   return (
     <View style={styles.card}>
       <Text style={styles.status}>
-        {isFull ? '금을 모두 모아 휴식중이에요' : '열심히 채굴 중이에요'}
+        {isLoading
+          ? '채굴 정보를 불러오는 중…'
+          : isFull
+            ? '금을 모두 모아 휴식중이에요'
+            : '열심히 채굴 중이에요'}
       </Text>
       <Text style={styles.amount}>채굴량 {formatGold(mined)}</Text>
     </View>
