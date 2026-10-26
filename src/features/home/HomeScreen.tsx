@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MiningCard } from '@/features/mining/MiningCard';
 import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
 import { useWallet } from '@/features/wallet/WalletProvider';
 
@@ -14,6 +15,8 @@ export default function HomeScreen() {
         <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
         <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
       </View>
+
+      <MiningCard />
     </SafeAreaView>
   );
 }
@@ -23,6 +26,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 16,
+    gap: 16,
   },
   balanceCard: {
     backgroundColor: '#FFF6DB',
