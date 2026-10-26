@@ -10,7 +10,8 @@ export type TransactionInput = Pick<Transaction, 'amount' | 'title' | 'source' |
 
 export type WalletAction =
   | { type: 'earn'; input: TransactionInput }
-  | { type: 'spend'; input: TransactionInput };
+  | { type: 'spend'; input: TransactionInput }
+  | { type: 'load'; state: WalletState };
 
 export const initialWalletState: WalletState = {
   balance: 0,
@@ -22,6 +23,9 @@ function createId(): string {
 }
 
 export function walletReducer(state: WalletState, action: WalletAction): WalletState {
+  // 기기에 저장해 둔 상태로 통째로 교체
+  if (action.type === 'load') return action.state;
+
   const { input } = action;
 
   if (input.amount <= 0) return state;

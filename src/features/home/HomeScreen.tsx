@@ -6,14 +6,20 @@ import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
 import { useWallet } from '@/features/wallet/WalletProvider';
 
 export default function HomeScreen() {
-  const { balance } = useWallet();
+  const { balance, isLoaded } = useWallet();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>보유 금</Text>
-        <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
-        <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
+        {isLoaded ? (
+          <>
+            <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
+            <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
+          </>
+        ) : (
+          <Text style={styles.balanceKrw}>불러오는 중…</Text>
+        )}
       </View>
 
       <MiningCard />
