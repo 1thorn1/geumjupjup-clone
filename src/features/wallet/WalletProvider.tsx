@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
 
 import {
+  getBalance,
   initialWalletState,
   walletReducer,
   type TransactionInput,
@@ -12,6 +13,7 @@ import type { GoldUnits } from './types';
 const STORAGE_KEY = 'wallet:state';
 
 type WalletContextValue = WalletState & {
+  balance: GoldUnits; // 내역에서 계산한 잔액
   isLoaded: boolean;
   earn: (input: TransactionInput) => void;
   spend: (input: TransactionInput) => void;
@@ -48,17 +50,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state, isLoaded]);
 
-  const value = useMemo<WalletContextValue>(
-    () => ({
+  const value = useMemo<WalletContextValue>(() => {
+    const balance = getBalance(state.transactions);
+    return {
       ...state,
+      balance,
       isLoaded,
       earn: (input) => dispatch({ type: 'earn', input }),
       spend: (input) => dispatch({ type: 'spend', input }),
       hasKey: (key) => state.transactions.some((tx) => tx.key === key),
-      canAfford: (amount) => amount <= state.balance,
-    }),
-    [state, isLoaded],
-  );
+      canAfford: (amount) => amount <= balance,
+    };
+  }, [state, isLoaded]);
 
   return <WalletContext value={value}>{children}</WalletContext>;
 }
