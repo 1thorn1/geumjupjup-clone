@@ -27,6 +27,11 @@ export function unitsToKrw(units: GoldUnits): number {
   return Math.floor((units / UNITS_PER_GRAM) * KRW_PER_GRAM);
 }
 
+/** 원화 → 필요한 금 units (모자라지 않게 올림). 예: 1000 → 6410256411 */
+export function krwToUnits(krw: number): GoldUnits {
+  return Math.ceil((krw / KRW_PER_GRAM) * UNITS_PER_GRAM);
+}
+
 /** 원화 표기. 예: 10000 → '10,000원' */
 export function formatKrw(krw: number): string {
   return `${String(krw).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}원`;
