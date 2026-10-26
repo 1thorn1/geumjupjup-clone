@@ -1,13 +1,16 @@
-import type { EarnSource, GoldUnits, Transaction } from './types';
+import type { GoldUnits, Transaction } from './types';
 
 export type WalletState = {
   balance: GoldUnits;
   transactions: Transaction[]; // 최신순
 };
 
+// 내역을 만들 때 넘기는 값 (id, type, createdAt은 reducer가 채운다)
+export type TransactionInput = Pick<Transaction, 'amount' | 'title' | 'source' | 'key'>;
+
 export type WalletAction =
-  | { type: 'earn'; source: EarnSource; amount: GoldUnits }
-  | { type: 'purchase'; productId: string; productName: string; amount: GoldUnits };
+  | { type: 'earn'; input: TransactionInput }
+  | { type: 'spend'; input: TransactionInput };
 
 export const initialWalletState: WalletState = {
   balance: 0,
@@ -19,36 +22,23 @@ function createId(): string {
 }
 
 export function walletReducer(state: WalletState, action: WalletAction): WalletState {
-  switch (action.type) {
-    case 'earn': {
-      if (action.amount <= 0) return state;
-      const tx: Transaction = {
-        id: createId(),
-        type: 'earn',
-        source: action.source,
-        amount: action.amount,
-        createdAt: Date.now(),
-      };
-      return {
-        balance: state.balance + action.amount,
-        transactions: [tx, ...state.transactions],
-      };
-    }
-    case 'purchase': {
-      // 잔액이 부족하면 상태를 바꾸지 않는다 (화면에서 미리 canAfford로 막는다)
-      if (action.amount <= 0 || action.amount > state.balance) return state;
-      const tx: Transaction = {
-        id: createId(),
-        type: 'purchase',
-        productId: action.productId,
-        productName: action.productName,
-        amount: action.amount,
-        createdAt: Date.now(),
-      };
-      return {
-        balance: state.balance - action.amount,
-        transactions: [tx, ...state.transactions],
-      };
-    }
-  }
+  const { input } = action;
+
+  if (input.amount <= 0) return state;
+  // 같은 key로 이미 처리한 내역이 있으면 무시한다 (같은 보상 재수령 방지)
+  if (state.transactions.some((tx) => tx.key === input.key)) return state;
+  // 잔액이 부족하면 차감하지 않는다 (화면에서 미리 canAfford로 막는다)
+  if (action.type === 'spend' && input.amount > state.balance) return state;
+
+  const tx: Transaction = {
+    id: createId(),
+    type: action.type,
+    ...input,
+    createdAt: new Date().toISOString(),
+  };
+
+  return {
+    balance: action.type === 'earn' ? state.balance + input.amount : state.balance - input.amount,
+    transactions: [tx, ...state.transactions],
+  };
 }

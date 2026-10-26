@@ -1,11 +1,12 @@
 import { createContext, use, useMemo, useReducer, type ReactNode } from 'react';
 
-import { initialWalletState, walletReducer, type WalletState } from './store';
-import type { EarnSource, GoldUnits } from './types';
+import { initialWalletState, walletReducer, type TransactionInput, type WalletState } from './store';
+import type { GoldUnits } from './types';
 
 type WalletContextValue = WalletState & {
-  earn: (source: EarnSource, amount: GoldUnits) => void;
-  purchase: (productId: string, productName: string, amount: GoldUnits) => void;
+  earn: (input: TransactionInput) => void;
+  spend: (input: TransactionInput) => void;
+  hasKey: (key: string) => boolean;
   canAfford: (amount: GoldUnits) => boolean;
 };
 
@@ -17,9 +18,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const value = useMemo<WalletContextValue>(
     () => ({
       ...state,
-      earn: (source, amount) => dispatch({ type: 'earn', source, amount }),
-      purchase: (productId, productName, amount) =>
-        dispatch({ type: 'purchase', productId, productName, amount }),
+      earn: (input) => dispatch({ type: 'earn', input }),
+      spend: (input) => dispatch({ type: 'spend', input }),
+      hasKey: (key) => state.transactions.some((tx) => tx.key === key),
       canAfford: (amount) => amount <= state.balance,
     }),
     [state],
