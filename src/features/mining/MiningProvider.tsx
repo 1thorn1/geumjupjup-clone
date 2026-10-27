@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, use, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { addBoost, type Boost, type BoostInput } from './mining';
+import type { GoldUnits } from '@/features/wallet/types';
+
+import { addBoost, getMinedAmount, type Boost, type BoostInput } from './mining';
 
 const STORAGE_KEY = 'mining:state';
 const LEGACY_STARTED_AT_KEY = 'mining:startedAt'; // 예전 버전에서 시작 시각만 저장하던 키
@@ -14,6 +16,9 @@ type MiningState = {
 type MiningContextValue = {
   state: MiningState | null; // 불러오기 전에는 null
   restart: () => void;
+  // 지금까지 쌓인 채굴량을 꺼내고 0부터 다시 시작. 꺼낼 게 없으면 null
+  // key는 이번 채굴의 시작 시각으로 만들어, 같은 채굴분을 두 번 적립하지 못하게 한다
+  collect: () => { amount: GoldUnits; key: string } | null;
   addBoost: (input: BoostInput) => void;
   hasBoostKey: (key: string) => boolean;
 };
@@ -53,6 +58,14 @@ export function MiningProvider({ children }: { children: ReactNode }) {
       state,
       // 채굴량을 0으로 되돌리고 다시 시작 (속도 보상은 그대로)
       restart: () => setState((s) => (s === null ? s : { ...s, startedAt: Date.now() })),
+      collect: () => {
+        if (state === null) return null;
+        const now = Date.now();
+        const amount = getMinedAmount(state.startedAt, now, state.boosts);
+        if (amount <= 0) return null;
+        setState((s) => (s === null ? s : { ...s, startedAt: now }));
+        return { amount, key: `mining:${state.startedAt}` };
+      },
       addBoost: (input) =>
         setState((s) => (s === null ? s : { ...s, boosts: addBoost(s.boosts, input, Date.now()) })),
       hasBoostKey: (key) => state?.boosts.some((b) => b.key === key) ?? false,
