@@ -1,7 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AttendanceCard } from '@/features/attendance/AttendanceCard';
 import { MiningCard } from '@/features/mining/MiningCard';
+import { RouletteEntryCard } from '@/features/roulette/RouletteEntryCard';
 import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
 import { useWallet } from '@/features/wallet/WalletProvider';
 
@@ -10,19 +12,25 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>보유 금</Text>
-        {isLoaded ? (
-          <>
-            <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
-            <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
-          </>
-        ) : (
-          <Text style={styles.balanceKrw}>불러오는 중…</Text>
-        )}
-      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.balanceCard}>
+          <Text style={styles.balanceLabel}>보유 금</Text>
+          {isLoaded ? (
+            <>
+              <Text style={styles.balanceGold}>{formatGold(balance)}</Text>
+              <Text style={styles.balanceKrw}>{formatKrw(unitsToKrw(balance))}</Text>
+            </>
+          ) : (
+            <Text style={styles.balanceKrw}>불러오는 중…</Text>
+          )}
+        </View>
 
-      <MiningCard />
+        <MiningCard />
+
+        <AttendanceCard />
+
+        <RouletteEntryCard />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -31,6 +39,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  content: {
     padding: 16,
     gap: 16,
   },

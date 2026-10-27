@@ -1,47 +1,25 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 
-import { getMinedAmount, MINING_CAP } from './mining';
+import { getMinedAmount, getSpeedPercent, MINING_CAP } from './mining';
+import { useMiningContext } from './MiningProvider';
 
-const STARTED_AT_KEY = 'mining:startedAt';
-
+// 채굴량을 1초마다 다시 계산해서 보여 줄 때 쓰는 훅
+// (공유 상태는 MiningProvider, 1초 갱신은 이 훅을 쓰는 화면만)
 export function useMining() {
-  // 채굴을 시작한 시각 (저장소에서 불러오기 전에는 null)
-  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const { state, restart, collect, addBoost, hasBoostKey } = useMiningContext();
   // 지금 시각 (1초마다 갱신해서 화면을 다시 그리게 함)
   const [now, setNow] = useState(() => Date.now());
-
-  // 앱이 켜지면 저장된 시작 시각을 불러옴. 없으면 지금을 시작 시각으로 저장
-  useEffect(() => {
-    async function load() {
-      const saved = await AsyncStorage.getItem(STARTED_AT_KEY);
-      if (saved !== null) {
-        setStartedAt(Number(saved));
-        return;
-      }
-      const t = Date.now();
-      await AsyncStorage.setItem(STARTED_AT_KEY, String(t));
-      setStartedAt(t);
-    }
-    load();
-  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const isLoading = startedAt === null;
-  const mined = startedAt === null ? 0 : getMinedAmount(startedAt, now);
+  const isLoading = state === null;
+  const boosts = state?.boosts ?? [];
+  const mined = state === null ? 0 : getMinedAmount(state.startedAt, now, boosts);
   const isFull = mined >= MINING_CAP;
+  const speedPercent = getSpeedPercent(boosts, now);
 
-  // 채굴량을 0으로 되돌리고 다시 시작 (금 줍기에서 쓸 예정)
-  const restart = () => {
-    const t = Date.now();
-    setStartedAt(t);
-    setNow(t);
-    AsyncStorage.setItem(STARTED_AT_KEY, String(t));
-  };
-
-  return { mined, isFull, isLoading, restart };
+  return { mined, isFull, isLoading, speedPercent, boosts, restart, collect, addBoost, hasBoostKey };
 }
