@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { watchAd } from '@/features/ads/ads';
 import { RewardPopup } from '@/features/reward/RewardPopup';
 import { formatGold } from '@/features/wallet/gold';
 import { useWallet } from '@/features/wallet/WalletProvider';
@@ -22,10 +24,14 @@ export function MiningCard() {
 
   const handleCollect = () => {
     if (!canCollect) return;
-    const result = collect();
-    if (result === null) return;
-    earn({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key });
-    setCollected(result.amount);
+    // 실제 앱처럼 광고를 끝까지 봐야 금을 주울 수 있다
+    // 광고를 보는 동안 쌓인 양까지 포함하도록, 채굴량은 광고가 끝난 순간에 꺼낸다
+    watchAd(() => {
+      const result = collect();
+      if (result === null) return;
+      earn({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key });
+      setCollected(result.amount);
+    });
   };
 
   return (
@@ -46,7 +52,8 @@ export function MiningCard() {
         onPress={handleCollect}
         accessibilityRole="button"
       >
-        <Text style={styles.buttonText}>금 줍기</Text>
+        <Ionicons name="play-circle" size={22} color="#fff" />
+        <Text style={styles.buttonText}>광고 보고 금 줍기</Text>
       </Pressable>
 
       <RewardPopup
@@ -87,6 +94,9 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
     backgroundColor: '#8B7FE8',
     borderRadius: 12,
     paddingVertical: 14,
