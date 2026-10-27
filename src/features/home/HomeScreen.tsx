@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AttendanceCard } from '@/features/attendance/AttendanceCard';
 import { MiningCard } from '@/features/mining/MiningCard';
+import { RouletteEntryCard } from '@/features/roulette/RouletteEntryCard';
 import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
 import { useWallet } from '@/features/wallet/WalletProvider';
 
@@ -27,6 +28,8 @@ export default function HomeScreen() {
         <MiningCard />
 
         <AttendanceCard />
+
+        <RouletteEntryCard />
       </ScrollView>
     </SafeAreaView>
   );
