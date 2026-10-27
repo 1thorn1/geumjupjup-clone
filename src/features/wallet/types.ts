@@ -4,8 +4,8 @@ export type GoldUnits = number;
 // 내역의 종류: 적립 또는 차감
 export type TransactionType = 'earn' | 'spend';
 
-// 금이 어디서 생기거나 쓰였는지
-export type TransactionSource = 'attendance' | 'mining' | 'message' | 'exchange';
+// 금이 어디서 생기거나 쓰였는지 (dev: 개발자 모드에서 테스트용으로 조정)
+export type TransactionSource = 'attendance' | 'mining' | 'message' | 'exchange' | 'dev';
 
 // 금 내역 한 줄
 export type Transaction = {

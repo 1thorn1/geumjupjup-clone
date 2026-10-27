@@ -21,6 +21,10 @@ type MiningContextValue = {
   collect: () => { amount: GoldUnits; key: string } | null;
   addBoost: (input: BoostInput) => void;
   hasBoostKey: (key: string) => boolean;
+  // 개발자 모드용
+  devFill: () => void; // 채굴량을 바로 상한까지 채움 (시작 시각을 아주 예전으로)
+  devRemoveBoosts: (shouldRemove: (boost: Boost) => boolean) => void; // 조건에 맞는 보상 기록 삭제
+  reset: () => void; // 지금부터 채굴 다시 시작 + 보상 기록 전부 삭제
 };
 
 const MiningContext = createContext<MiningContextValue | null>(null);
@@ -69,6 +73,10 @@ export function MiningProvider({ children }: { children: ReactNode }) {
       addBoost: (input) =>
         setState((s) => (s === null ? s : { ...s, boosts: addBoost(s.boosts, input, Date.now()) })),
       hasBoostKey: (key) => state?.boosts.some((b) => b.key === key) ?? false,
+      devFill: () => setState((s) => (s === null ? s : { ...s, startedAt: 0 })),
+      devRemoveBoosts: (shouldRemove) =>
+        setState((s) => (s === null ? s : { ...s, boosts: s.boosts.filter((b) => !shouldRemove(b)) })),
+      reset: () => setState({ startedAt: Date.now(), boosts: [] }),
     }),
     [state],
   );

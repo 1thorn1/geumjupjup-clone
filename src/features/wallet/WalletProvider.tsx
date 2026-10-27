@@ -21,6 +21,7 @@ type WalletContextValue = WalletState & {
   spend: (input: TransactionInput) => void;
   hasKey: (key: string) => boolean;
   canAfford: (amount: GoldUnits) => boolean;
+  reset: () => void; // 개발자 모드: 처음 설치한 상태(샘플 내역)로 되돌림
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -64,6 +65,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       spend: (input) => dispatch({ type: 'spend', input }),
       hasKey: (key) => state.transactions.some((tx) => tx.key === key),
       canAfford: (amount) => amount <= balance,
+      reset: () => dispatch({ type: 'load', state: { transactions: initialTransactions } }),
     };
   }, [state, isLoaded]);
 
