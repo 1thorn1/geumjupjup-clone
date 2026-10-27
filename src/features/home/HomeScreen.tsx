@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AttendanceCard } from '@/features/attendance/AttendanceCard';
+import { useSecretTap } from '@/features/dev/useSecretTap';
 import { MiningCard } from '@/features/mining/MiningCard';
 import { RouletteEntryCard } from '@/features/roulette/RouletteEntryCard';
 import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
@@ -11,10 +12,13 @@ import { useWallet } from '@/features/wallet/WalletProvider';
 
 export default function HomeScreen() {
   const { balance, isLoaded } = useWallet();
+  const handleSecretTap = useSecretTap(() => router.push('/dev'));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {/* 왼쪽 위 숨겨진 영역: 연속 20번 누르면 개발자 모드 */}
+        <Pressable style={styles.secretArea} onPress={handleSecretTap} accessibilityElementsHidden />
         {/* 보유 금을 누르면 금 내역 화면으로 이동 (실제 앱과 같은 흐름) */}
         <Pressable
           style={styles.balanceCard}
@@ -52,6 +56,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  secretArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 56,
+    height: 56,
+    zIndex: 1,
   },
   content: {
     padding: 16,

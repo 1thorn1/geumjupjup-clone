@@ -12,6 +12,7 @@ const SOURCE_ICONS: Record<TransactionSource, ComponentProps<typeof Ionicons>['n
   attendance: 'calendar',
   message: 'mail',
   exchange: 'gift',
+  dev: 'construct',
 };
 
 // 금 내역 한 줄
