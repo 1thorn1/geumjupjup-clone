@@ -7,7 +7,9 @@ export const AD_DURATION_SECONDS = 5;
 let pendingOnComplete: (() => void) | null = null;
 
 // 광고 화면을 띄우고, 끝까지 보면 onComplete를 실행한다
+// 이미 광고를 보는 중이면 무시한다 (버튼 연타로 광고 화면이 두 번 뜨는 것 방지)
 export function watchAd(onComplete: () => void) {
+  if (pendingOnComplete !== null) return;
   pendingOnComplete = onComplete;
   router.push('/ad');
 }

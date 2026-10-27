@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 
 import { ATTENDANCE_BOOST_PERCENT } from '@/data/rewards';
+import { watchAd } from '@/features/ads/ads';
 import { useMiningContext } from '@/features/mining/MiningProvider';
 import { RewardPopup } from '@/features/reward/RewardPopup';
 import { toLocalDateKey } from '@/utils/date';
@@ -30,9 +32,12 @@ export function AttendanceCard() {
 
   const handleCheckIn = () => {
     if (isLoading || checkedIn) return;
-    addBoost({ title: '출석 체크', percent: ATTENDANCE_BOOST_PERCENT, key: todayKey, expiresAt: null });
-    setJustStamped(true);
-    setTimeout(() => setShowPopup(true), POPUP_DELAY_MS);
+    // 광고를 끝까지 봐야 출석이 완료된다
+    watchAd(() => {
+      addBoost({ title: '출석 체크', percent: ATTENDANCE_BOOST_PERCENT, key: todayKey, expiresAt: null });
+      setJustStamped(true);
+      setTimeout(() => setShowPopup(true), POPUP_DELAY_MS);
+    });
   };
 
   return (
@@ -59,7 +64,8 @@ export function AttendanceCard() {
         onPress={handleCheckIn}
         accessibilityRole="button"
       >
-        <Text style={styles.buttonText}>{checkedIn ? '오늘 출석 완료' : '출석하기'}</Text>
+        {checkedIn ? null : <Ionicons name="play-circle" size={20} color="#fff" />}
+        <Text style={styles.buttonText}>{checkedIn ? '오늘 출석 완료' : '광고 보고 출석하기'}</Text>
       </Pressable>
 
       <RewardPopup
@@ -128,6 +134,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   button: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
     backgroundColor: '#8B7FE8',
     borderRadius: 12,
     paddingVertical: 14,
