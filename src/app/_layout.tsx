@@ -10,6 +10,10 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="roulette" options={{ title: '룰렛 미션', headerBackTitle: '홈' }} />
+          <Stack.Screen
+            name="ad"
+            options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }}
+          />
         </Stack>
       </MiningProvider>
     </WalletProvider>
