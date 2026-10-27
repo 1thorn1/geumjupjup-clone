@@ -3,14 +3,17 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ROULETTE_DAILY_LIMIT } from '@/data/rewards';
 import { useMiningContext } from '@/features/mining/MiningProvider';
 import { toLocalDateKey } from '@/utils/date';
 
+import { countTodaySpins, remainingSpins } from './roulette';
+
 // 홈에서 룰렛 화면으로 들어가는 카드
 export function RouletteEntryCard() {
-  const { hasBoostKey } = useMiningContext();
-  const [todayKey] = useState(() => `roulette:${toLocalDateKey()}`);
-  const done = hasBoostKey(todayKey);
+  const { state } = useMiningContext();
+  const [todayKey] = useState(() => toLocalDateKey());
+  const remaining = remainingSpins(countTodaySpins(state?.boosts ?? [], todayKey));
 
   return (
     <Pressable style={styles.card} onPress={() => router.push('/roulette')} accessibilityRole="button">
@@ -19,7 +22,11 @@ export function RouletteEntryCard() {
       </View>
       <View style={styles.info}>
         <Text style={styles.title}>룰렛 미션</Text>
-        <Text style={styles.sub}>{done ? '오늘 참여 완료' : '돌리면 채굴 속도 최대 +100%'}</Text>
+        <Text style={styles.sub}>
+          {remaining > 0
+            ? `오늘 ${remaining}/${ROULETTE_DAILY_LIMIT}회 남음 · 채굴 속도 최대 +20%`
+            : '오늘 참여 완료'}
+        </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#999" />
     </Pressable>

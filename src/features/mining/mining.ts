@@ -56,8 +56,9 @@ export function getMinedAmount(startedAt: number, now: number, boosts: Boost[] =
 }
 
 // 보상 추가. 같은 key가 이미 있으면 그대로 돌려준다 (같은 보상 재수령 방지)
+// percent 0(룰렛 꽝)도 "참여 기록"으로 남긴다. 속도에는 영향이 없다
 export function addBoost(boosts: Boost[], input: BoostInput, now: number): Boost[] {
-  if (input.percent <= 0) return boosts;
+  if (input.percent < 0) return boosts;
   if (boosts.some((b) => b.key === input.key)) return boosts;
   const boost: Boost = {
     id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
