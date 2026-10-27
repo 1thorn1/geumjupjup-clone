@@ -4,11 +4,17 @@ import { formatGold } from '@/features/wallet/gold';
 
 import { useMining } from './useMining';
 
+// 속도 표기. 예: 3062 → '3,062%'
+function formatPercent(percent: number): string {
+  return `${String(percent).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}%`;
+}
+
 export function MiningCard() {
-  const { mined, isFull, isLoading } = useMining();
+  const { mined, isFull, isLoading, speedPercent } = useMining();
 
   return (
     <View style={styles.card}>
+      <Text style={styles.speed}>{formatPercent(speedPercent)}</Text>
       <Text style={styles.status}>
         {isLoading
           ? '채굴 정보를 불러오는 중…'
@@ -27,6 +33,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     gap: 8,
+  },
+  speed: {
+    alignSelf: 'flex-end',
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
   },
   status: {
     color: '#fff',
