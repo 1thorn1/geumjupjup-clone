@@ -6,3 +6,17 @@ export function toLocalDateKey(date: Date = new Date()): string {
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
+
+// ISO 문자열 → 기기 시간 기준 날짜. 예: '10월 27일'
+export function formatMonthDay(iso: string): string {
+  const date = new Date(iso);
+  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+}
+
+// ISO 문자열 → 기기 시간 기준 시각. 예: '21:46'
+export function formatTime(iso: string): string {
+  const date = new Date(iso);
+  const h = String(date.getHours()).padStart(2, '0');
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${min}`;
+}
