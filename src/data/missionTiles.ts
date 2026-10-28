@@ -16,4 +16,4 @@ export const missionTiles: MissionTile[] = [
   { id: 'cart', name: '광차 미션', emoji: '🛒' },
   { id: 'pouch', name: '보따리 미션', emoji: '💰' },
 ];
-// 타일마다 연결된 오퍼월 미션은 offers.ts의 tileId로 찾는다
+// 타일은 외부 게임·광고 연동 영역이라 누르면 "준비 중" 안내만 띄운다
