@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function SettingScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>설정</Text>
+      <Text style={styles.text}>프로필</Text>
+      <Text style={styles.sub}>준비 중인 기능입니다</Text>
     </View>
   );
 }
@@ -18,5 +19,10 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 24,
     fontWeight: '700',
+  },
+  sub: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#888',
   },
 });
