@@ -18,7 +18,7 @@ export function ExchangeConfirmModal({ product, balance, onCancel, onConfirm }: 
       <View style={styles.backdrop}>
         {product && (
           <View style={styles.card}>
-            <Text style={styles.title}>{product.name}을(를) 교환할까요?</Text>
+            <Text style={styles.title}>{product.fullName}을(를) 교환할까요?</Text>
 
             <View style={styles.rows}>
               <Row label="보유 금" value={formatGold(balance)} />
