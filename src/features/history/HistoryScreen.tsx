@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +32,9 @@ function groupByDate(transactions: Transaction[]): Section[] {
 
 export default function HistoryScreen() {
   const { balance, transactions, isLoaded } = useWallet();
-  const [tab, setTab] = useState<TransactionType>('earn');
+  // 선물 화면의 [구매 내역]에서 오면 주소가 /history?tab=spend → 구매 내역 탭부터 보여 준다
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<TransactionType>(params.tab === 'spend' ? 'spend' : 'earn');
 
   const current = TABS.find((t) => t.type === tab) ?? TABS[0];
   const sections = groupByDate(transactions.filter((tx) => tx.type === tab));

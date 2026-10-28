@@ -13,7 +13,7 @@ function createDevKey(): string {
   return `dev:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
 }
 
-const ADD_KRW_OPTIONS = [1_000, 5_000, 10_000];
+const ADD_KRW_OPTIONS = [1_000, 10_000, 100_000, 1_000_000];
 const SPEED_OPTIONS = [100, 1_000, 3_000];
 
 // 테스트·시연용 개발자 모드 (홈 왼쪽 위를 20번 누르면 열림)
