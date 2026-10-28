@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { missionTiles, type MissionTile } from '@/data/missionTiles';
-import { FEATURED_OFFER_ID, getOffer, getOfferByTile, totalReward } from '@/data/offers';
+import { FEATURED_OFFER_ID, getOffer, totalReward } from '@/data/offers';
 import { COLORS } from '@/features/layout/theme';
 import { RewardPopup } from '@/features/reward/RewardPopup';
 
@@ -18,17 +18,11 @@ function openOffer(offerId: string) {
   router.push({ pathname: '/offer/[id]', params: { id: offerId } });
 }
 
-// 홈 "▶ 채굴 속도 증가시키기" 영역 = 오퍼월 목록
-// 노란 판의 미션 타일 7개 + "미션달성하고 보상받기" 카드. 누르면 미션 상세로 이동
+// 홈 "▶ 채굴 속도 증가시키기" 영역
+// 노란 판의 미션 타일 7개는 외부 게임 연동이라 "준비 중", "미션달성하고 보상받기" 카드만 오퍼월로 이동
 export function MissionPanel() {
   const [popup, setPopup] = useState<'guide' | 'soon' | null>(null);
   const featured = getOffer(FEATURED_OFFER_ID);
-
-  const handleTile = (tile: MissionTile) => {
-    const offer = getOfferByTile(tile.id);
-    if (offer) openOffer(offer.id);
-    else setPopup('soon');
-  };
 
   return (
     <View style={styles.wrap}>
@@ -45,7 +39,7 @@ export function MissionPanel() {
         {[missionTiles.slice(0, 3), missionTiles.slice(3)].map((row, i) => (
           <View key={i} style={styles.panelRow}>
             {row.map((tile) => (
-              <Tile key={tile.id} tile={tile} onPress={() => handleTile(tile)} />
+              <Tile key={tile.id} tile={tile} onPress={() => setPopup('soon')} />
             ))}
           </View>
         ))}
@@ -78,7 +72,7 @@ export function MissionPanel() {
         visible={popup === 'soon'}
         icon="construct"
         title="준비 중이에요"
-        message="미션 상세는 곧 열려요."
+        message="게임·앱 연동 미션은 준비 중이에요. 아래 미션달성하고 보상받기에서 먼저 참여해 보세요."
         buttonLabel="닫기"
         onClose={() => setPopup(null)}
       />
