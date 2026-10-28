@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { featuredMission, missionTiles, type MissionTile } from '@/data/missionTiles';
+import { missionTiles, type MissionTile } from '@/data/missionTiles';
+import { FEATURED_OFFER_ID, getOffer, getOfferByTile, totalReward } from '@/data/offers';
 import { COLORS } from '@/features/layout/theme';
 import { RewardPopup } from '@/features/reward/RewardPopup';
 
@@ -11,10 +13,22 @@ function withComma(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// 홈 "▶ 채굴 속도 증가시키기" 영역: 노란 판의 미션 타일 7개 + "미션달성하고 보상받기" 카드
-// 타일을 누르면 오퍼월 미션 상세로 갈 예정 (이번에는 준비 중 안내)
+// 오퍼월 미션 상세로 이동
+function openOffer(offerId: string) {
+  router.push({ pathname: '/offer/[id]', params: { id: offerId } });
+}
+
+// 홈 "▶ 채굴 속도 증가시키기" 영역 = 오퍼월 목록
+// 노란 판의 미션 타일 7개 + "미션달성하고 보상받기" 카드. 누르면 미션 상세로 이동
 export function MissionPanel() {
   const [popup, setPopup] = useState<'guide' | 'soon' | null>(null);
+  const featured = getOffer(FEATURED_OFFER_ID);
+
+  const handleTile = (tile: MissionTile) => {
+    const offer = getOfferByTile(tile.id);
+    if (offer) openOffer(offer.id);
+    else setPopup('soon');
+  };
 
   return (
     <View style={styles.wrap}>
@@ -31,24 +45,27 @@ export function MissionPanel() {
         {[missionTiles.slice(0, 3), missionTiles.slice(3)].map((row, i) => (
           <View key={i} style={styles.panelRow}>
             {row.map((tile) => (
-              <Tile key={tile.id} tile={tile} onPress={() => setPopup('soon')} />
+              <Tile key={tile.id} tile={tile} onPress={() => handleTile(tile)} />
             ))}
           </View>
         ))}
       </View>
 
-      <Pressable style={styles.featured} onPress={() => setPopup('soon')} accessibilityRole="button">
-        <View style={styles.featuredIcon}>
-          <Text style={styles.featuredEmoji}>{featuredMission.emoji}</Text>
-        </View>
-        <View style={styles.featuredInfo}>
-          <Text style={styles.featuredTitle}>미션달성하고 보상받기</Text>
-          <Text style={styles.featuredSub}>{featuredMission.title}</Text>
-        </View>
-        <View style={styles.featuredBadge}>
-          <Text style={styles.featuredBadgeText}>+{withComma(featuredMission.totalPercent)}%</Text>
-        </View>
-      </Pressable>
+      {featured ? (
+        <Pressable style={styles.featured} onPress={() => openOffer(featured.id)} accessibilityRole="button">
+          <View style={[styles.featuredIcon, { backgroundColor: featured.color }]}>
+            <Text style={styles.featuredEmoji}>{featured.emoji}</Text>
+          </View>
+          <View style={styles.featuredInfo}>
+            <Text style={styles.featuredTitle}>미션달성하고 보상받기</Text>
+            <Text style={styles.featuredSub}>{featured.title}</Text>
+          </View>
+          <View style={styles.featuredBadge}>
+            {/* 단계 보상을 모두 더한 값 */}
+            <Text style={styles.featuredBadgeText}>+{withComma(totalReward(featured))}%</Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <RewardPopup
         visible={popup === 'guide'}
@@ -174,7 +191,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   featuredEmoji: {
-    fontSize: 32,
+    fontSize: 22,
   },
   featuredInfo: {
     flex: 1,

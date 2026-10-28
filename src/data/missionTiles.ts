@@ -16,10 +16,4 @@ export const missionTiles: MissionTile[] = [
   { id: 'cart', name: '광차 미션', emoji: '🛒' },
   { id: 'pouch', name: '보따리 미션', emoji: '💰' },
 ];
-
-// "미션달성하고 보상받기" 카드에 보여 줄 대표 미션 (오퍼월 PR에서 실제 미션과 연결)
-export const featuredMission = {
-  title: '냥탈출',
-  emoji: '🐱',
-  totalPercent: 1_515, // 단계별 속도 보상의 합
-};
+// 타일마다 연결된 오퍼월 미션은 offers.ts의 tileId로 찾는다
