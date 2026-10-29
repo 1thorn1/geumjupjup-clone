@@ -18,7 +18,7 @@ export default function SettingsScreen() {
 
   const activity: MenuItem[] = [
     { label: '적립 내역', onPress: () => router.push('/history') },
-    { label: '채굴 속도 내역', onPress: showSoon },
+    { label: '채굴 속도 내역', onPress: () => router.push('/boost-history') },
     { label: '출석 체크', onPress: () => router.push('/attendance') },
     { label: '금줍줍 인스타그램', onPress: showSoon },
   ];

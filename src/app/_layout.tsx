@@ -15,6 +15,7 @@ export default function RootLayout() {
             <Stack.Screen name="roulette" options={{ title: '행운추첨', headerBackTitle: '홈' }} />
             <Stack.Screen name="attendance" options={{ title: '출석체크', headerBackTitle: '홈' }} />
             <Stack.Screen name="history" options={{ title: '금 내역', headerBackTitle: '홈' }} />
+            <Stack.Screen name="boost-history" options={{ title: '채굴 속도 내역', headerBackTitle: '프로필' }} />
             <Stack.Screen name="offer/[id]" options={{ headerBackTitle: '홈' }} />
             <Stack.Screen name="dev" options={{ title: '개발자 모드', presentation: 'modal' }} />
             <Stack.Screen

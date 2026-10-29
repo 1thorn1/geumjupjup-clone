@@ -4,9 +4,9 @@ import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatGold, formatKrw, unitsToKrw } from '@/features/wallet/gold';
-import type { Transaction, TransactionType } from '@/features/wallet/types';
+import type { TransactionType } from '@/features/wallet/types';
 import { useWallet } from '@/features/wallet/WalletProvider';
-import { formatMonthDay } from '@/utils/date';
+import { groupByMonthDay } from '@/utils/date';
 
 import { TransactionItem } from './TransactionItem';
 
@@ -16,20 +16,6 @@ const TABS: { type: TransactionType; label: string; empty: string }[] = [
   { type: 'spend', label: '구매 내역', empty: '아직 구매 내역이 없어요' },
 ];
 
-type Section = { title: string; data: Transaction[] };
-
-// 최신순 내역을 날짜별로 묶는다 (기기 시간 기준)
-function groupByDate(transactions: Transaction[]): Section[] {
-  const sections: Section[] = [];
-  for (const tx of transactions) {
-    const title = formatMonthDay(tx.createdAt);
-    const last = sections[sections.length - 1];
-    if (last && last.title === title) last.data.push(tx);
-    else sections.push({ title, data: [tx] });
-  }
-  return sections;
-}
-
 export default function HistoryScreen() {
   const { balance, transactions, isLoaded } = useWallet();
   // 선물 화면의 [구매 내역]에서 오면 주소가 /history?tab=spend → 구매 내역 탭부터 보여 준다
@@ -37,7 +23,10 @@ export default function HistoryScreen() {
   const [tab, setTab] = useState<TransactionType>(params.tab === 'spend' ? 'spend' : 'earn');
 
   const current = TABS.find((t) => t.type === tab) ?? TABS[0];
-  const sections = groupByDate(transactions.filter((tx) => tx.type === tab));
+  const sections = groupByMonthDay(
+    transactions.filter((tx) => tx.type === tab),
+    (tx) => tx.createdAt,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
