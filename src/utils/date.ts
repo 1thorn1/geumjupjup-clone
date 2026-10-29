@@ -20,3 +20,16 @@ export function formatTime(iso: string): string {
   const min = String(date.getMinutes()).padStart(2, '0');
   return `${h}:${min}`;
 }
+
+// 최신순 목록을 날짜별로 묶는다 (기기 시간 기준). 금 내역·채굴 속도 내역이 같이 쓴다
+// getIso: 항목에서 날짜로 쓸 ISO 문자열을 꺼내는 함수
+export function groupByMonthDay<T>(items: T[], getIso: (item: T) => string): { title: string; data: T[] }[] {
+  const sections: { title: string; data: T[] }[] = [];
+  for (const item of items) {
+    const title = formatMonthDay(getIso(item));
+    const last = sections[sections.length - 1];
+    if (last && last.title === title) last.data.push(item);
+    else sections.push({ title, data: [item] });
+  }
+  return sections;
+}
