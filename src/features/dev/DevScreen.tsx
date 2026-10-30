@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { errorMessage } from '@/api/client';
 import { useMiningContext } from '@/features/mining/MiningProvider';
 import { useMining } from '@/features/mining/useMining';
 import { formatGold, formatKrw, krwToUnits, unitsToKrw } from '@/features/wallet/gold';
@@ -19,26 +20,35 @@ const SPEED_OPTIONS = [100, 1_000, 3_000];
 // 테스트·시연용 개발자 모드 (홈 왼쪽 위를 20번 누르면 열림)
 // 잔액을 직접 바꾸지 않고 "개발자 모드" 내역을 추가해서, 잔액 = 내역의 합 원칙을 그대로 지킨다
 export default function DevScreen() {
-  const { balance, earn, spend, reset: resetWallet } = useWallet();
+  const { balance, earn, devClear, reset: resetWallet } = useWallet();
   const { mined, speedPercent } = useMining();
   const { addBoost, devFill, devRemoveBoosts, reset: resetMining } = useMiningContext();
   const [todayKey] = useState(() => toLocalDateKey());
   const [message, setMessage] = useState<string | null>(null);
 
+  // 서버 요청을 보내고, 끝나면 결과 문장을 보여 준다
+  const run = (request: Promise<unknown>, done: string) => {
+    setMessage('서버에 요청 중…');
+    request.then(
+      () => setMessage(done),
+      (e: unknown) => setMessage(`실패: ${errorMessage(e)}`),
+    );
+  };
+
   const addGold = (krw: number) => {
-    earn({ amount: krwToUnits(krw), title: '개발자 모드 지급', source: 'dev', key: createDevKey() });
-    setMessage(`금 ${formatKrw(krw)}어치를 추가했어요`);
+    run(
+      earn({ amount: krwToUnits(krw), title: '개발자 모드 지급', source: 'dev', key: createDevKey() }),
+      `금 ${formatKrw(krw)}어치를 추가했어요`,
+    );
   };
 
   const clearGold = () => {
     if (balance <= 0) return;
-    spend({ amount: balance, title: '개발자 모드 차감', source: 'dev', key: createDevKey() });
-    setMessage('보유 금을 0으로 만들었어요');
+    run(devClear(createDevKey()), '보유 금을 0으로 만들었어요');
   };
 
   const addSpeed = (percent: number) => {
-    addBoost({ title: '개발자 모드 가속', percent, key: createDevKey(), expiresAt: null });
-    setMessage(`채굴 속도 +${percent}%`);
+    run(addBoost({ title: '개발자 모드 가속', percent, key: createDevKey(), expiresAt: null }), `채굴 속도 +${percent}%`);
   };
 
   return (
@@ -71,8 +81,7 @@ export default function DevScreen() {
             label="개발자 가속 제거"
             danger
             onPress={() => {
-              devRemoveBoosts((b) => b.key.startsWith('dev:'));
-              setMessage('개발자 모드로 올린 속도를 없앴어요');
+              run(devRemoveBoosts('dev:'), '개발자 모드로 올린 속도를 없앴어요');
             }}
           />
         </Section>
@@ -91,15 +100,13 @@ export default function DevScreen() {
           <DevButton
             label="출석 다시 하기"
             onPress={() => {
-              devRemoveBoosts((b) => b.key === `attendance:${todayKey}`);
-              setMessage('오늘 출석 기록을 지웠어요');
+              run(devRemoveBoosts(`attendance:${todayKey}`), '오늘 출석 기록을 지웠어요');
             }}
           />
           <DevButton
             label="룰렛 횟수 초기화"
             onPress={() => {
-              devRemoveBoosts((b) => b.key.startsWith(`roulette:${todayKey}:`));
-              setMessage('오늘 룰렛 기록을 지웠어요');
+              run(devRemoveBoosts(`roulette:${todayKey}:`), '오늘 룰렛 기록을 지웠어요');
             }}
           />
         </Section>
@@ -109,9 +116,8 @@ export default function DevScreen() {
             label="처음 설치한 상태로 초기화"
             danger
             onPress={() => {
-              resetWallet();
-              resetMining();
-              setMessage('지갑은 샘플 내역으로, 채굴은 처음부터 다시 시작해요');
+              // 서버의 내 기록(금 내역·속도 보상·교환·오퍼 참여)을 지우고 샘플 내역을 다시 받는다
+              run(resetWallet().then(resetMining), '지갑은 샘플 내역으로, 채굴은 처음부터 다시 시작해요');
             }}
           />
         </Section>

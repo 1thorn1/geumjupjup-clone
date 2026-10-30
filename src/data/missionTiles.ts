@@ -16,4 +16,4 @@ export const missionTiles: MissionTile[] = [
   { id: 'cart', name: '광차 미션', emoji: '🛒' },
   { id: 'pouch', name: '보따리 미션', emoji: '💰' },
 ];
-// 타일은 외부 게임·광고 연동 영역이라 누르면 "준비 중" 안내만 띄운다
+// 타일 id마다 서버 offers.tile_id가 같은 오퍼 하나가 연결된다 (supabase/migrations 참고)
