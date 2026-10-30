@@ -42,6 +42,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "f9b86f2e-9549-4953-8945-b29fe3992c5c"
+      }
+    },
+    "owner": "ddabongnyang2"
   }
 }
