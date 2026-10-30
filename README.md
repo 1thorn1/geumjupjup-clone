@@ -1,56 +1,117 @@
-# Welcome to your Expo app 👋
+# 금줍줍 모작
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+리워드 앱 **금줍줍**의 핵심 흐름(채굴 → 광고 보고 금 줍기 → 상품 교환)을 Expo(React Native)로 따라 만든 과제입니다.
+서버·결제·광고 SDK 없이 더미 데이터와 기기 저장소로 동작합니다.
 
-## Get started
+- 분석 문서: [docs/analysis.md](docs/analysis.md) (실제 앱을 써 보고 정리한 화면·흐름)
+- 설계 문서: [docs/design.md](docs/design.md) (폴더 구조, 상태 관리 방식, 더미 데이터 구조)
+- 버그 리포트: [docs/bug-report.md](docs/bug-report.md) (실제 앱을 쓰며 발견한 문제)
 
-1. Install dependencies
+## 실행 방법
 
-   ```bash
-   npm install
-   ```
+### 1. APK 설치 (안드로이드)
+- APK 다운로드: (빌드 완료 후 링크 추가 예정)
+- 휴대폰에서 링크를 열어 설치합니다. "출처를 알 수 없는 앱" 설치 허용이 필요할 수 있습니다.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 2. 소스에서 실행
+Node.js(LTS)가 필요합니다.
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- **웹**: 터미널에서 `w`를 누르면 브라우저에서 열립니다. 개발자 도구의 모바일 화면 크기로 보는 것을 권장합니다.
+- **휴대폰 (Expo Go)**: [Expo Go](https://expo.dev/go) 앱으로 터미널의 QR 코드를 찍습니다. (Expo SDK 58)
 
-### Other setup steps
+### 3. APK 직접 빌드
+```bash
+npx eas-cli build -p android --profile preview
+```
+`eas.json`의 `preview` 프로필이 바로 설치 가능한 APK로 빌드합니다. Expo 계정 로그인이 필요합니다.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 개발자 모드 (시연용)
+홈 왼쪽 위 **금줍줍 로고를 20번** 누르면 열립니다.
+채굴만으로는 상품 교환까지 금을 모으기 어려워서, 테스트와 시연을 위해 만들었습니다.
 
-## Learn more
+- 보유 금 추가 / 0으로 만들기
+- 채굴 속도 올리기 / 개발자 가속 제거
+- 채굴량을 바로 상한까지 채우기
+- 출석·룰렛 오늘 기록 초기화, 처음 설치한 상태로 초기화
 
-To learn more about developing your project with Expo, look at the following resources:
+잔액을 직접 바꾸지 않고 "개발자 모드" 내역을 추가하는 방식이라, 개발자 모드를 써도 **잔액 = 내역의 합** 원칙이 유지됩니다.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 핵심 흐름
 
-## Join the community
+```
+금이 시간에 따라 자동으로 채굴됨 (상한에 차면 멈춤)
+  → [광고 보고 금 줍기] → 쌓인 채굴량이 지갑에 적립 → 채굴은 0부터 다시
+  → 선물 탭에서 상품 교환 → 잔액 차감
 
-Join our community of developers creating universal apps.
+출석·룰렛·오퍼월 미션 보상 = 금이 아니라 "채굴 속도(%)" 증가
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+실제 앱을 써 보니 미션 보상은 금이 아니라 채굴 속도였고, 지갑에 금이 들어오는 길은 "광고 보고 금 줍기" 하나였습니다. 모작도 이 구조를 그대로 따랐습니다.
+
+## 기술 선택 이유
+
+| 기술 | 이유 |
+|---|---|
+| **Expo (SDK 58) + TypeScript** | 네이티브 설정 없이 웹·Expo Go·APK로 바로 실행할 수 있어 과제 기간 안에 화면 구현에 집중할 수 있었습니다. 금 단위·내역 타입을 TypeScript로 고정해 실수를 컴파일 단계에서 잡았습니다. |
+| **Expo Router** | 파일 하나가 화면 하나라서 화면 구조가 폴더로 보입니다. 탭(홈/만보기/선물/프로필)과 스택(광고, 내역, 오퍼월 상세 등)을 레이아웃 파일로 나눴고, 오퍼월 상세는 동적 경로(`offer/[id]`)로 만들었습니다. |
+| **React Context + useReducer** | 잔액·채굴 상태는 여러 화면이 함께 써서 한 곳에 둬야 합니다. 상태 종류가 지갑·채굴·오퍼월 세 가지로 적어서 외부 라이브러리(Redux, Zustand) 없이 React 기본 기능으로 충분하다고 판단했습니다. 지갑 규칙(중복 방지, 잔액 부족)은 reducer 한 곳에 모았습니다. |
+| **AsyncStorage** | 서버 대신 기기에 상태를 저장해 앱을 다시 켜도 잔액·채굴·출석 기록이 유지됩니다. |
+| **react-native-reanimated** | 룰렛 회전, 출석 도장, 보상 팝업 같은 연출을 UI 스레드에서 부드럽게 돌리기 위해 썼습니다. |
+
+### 설계에서 신경 쓴 점
+- **잔액 = 내역의 합**: 잔액을 따로 저장하지 않고 항상 내역에서 계산합니다. 잔액과 내역이 어긋날 수 있는 구조 자체를 없앴습니다.
+- **금은 정수로 저장**: 0.000000000001g(10⁻¹²g)을 1로 보는 정수로 저장해 소수 계산 오차를 막았습니다.
+- **중복 방지는 key로**: 모든 적립·보상에 고유 key(`mining:시작시각`, `attendance:날짜` 등)를 붙이고, 같은 key는 다시 처리하지 않습니다. 버튼 연타·화면 재진입에도 보상은 한 번만 들어갑니다.
+- **저장 대신 계산**: 채굴량(시작 시각 + 경과 시간), 채굴 속도(기본 100% + 받은 보상), 출석 여부, 룰렛 남은 횟수는 저장하지 않고 기록에서 계산합니다.
+
+자세한 내용은 [설계 문서](docs/design.md)에 있습니다.
+
+## 구현 범위
+
+### 필수
+- [x] **더미 데이터**: 사용자, 샘플 금 내역, 교환 상품, 오퍼월 미션, 보상 수치 (`src/data/`)
+- [x] **홈**: 공통 상단 바(보유 금 원 ↔ g 전환), 이벤트 배너, 채굴 카드, 채굴 속도 미션 판, 행운추첨·출석체크 진입점
+- [x] **적립 2종 이상 + 보상 연출**: 광고 보고 금 줍기(금 적립), 출석 체크·룰렛·오퍼월(채굴 속도 적립). 보상 팝업, 출석 도장, 룰렛 회전 연출
+- [x] **중복 적립 방지**: key 기반. 연타·재진입해도 같은 보상은 1회
+- [x] **금 내역**: 상세 내역 / 구매 내역 탭, 날짜별 목록. 채굴 속도 내역은 프로필 > 내 활동에서 따로 확인
+- [x] **교환**: 상품 목록 → 교환 확인 → 잔액 차감, 잔액 부족 시 안내 팝업
+- [x] **상태 동기화**: 어느 화면에서 적립·교환해도 상단 바, 선물 탭, 내역이 즉시 같은 값
+- [x] **실행**: 웹, Expo Go, APK
+
+### 선택
+- [x] **Mock 오퍼월**: 미션 상세 → 참여 → 단계 완료 → 지급 대기(3초) → 지급 완료. 지급 시각을 저장해서 앱을 껐다 켜도 이어서 지급
+- [x] **광고 시청 보상 mock**: 5초 광고 화면, 끝까지 봐야 보상. 출석 하루 1회, 룰렛 하루 3회(첫 회 무료, 이후 광고)
+- [x] **연출**: 보상 팝업, 출석 도장, 룰렛 회전, 상단 잔액 원 ↔ g 슬라이드
+- [ ] **낙관적 업데이트 + 롤백**
+- [ ] **테스트**
+
+## 못 한 것과 이유
+
+| 항목 | 이유 | 하게 된다면 |
+|---|---|---|
+| 낙관적 업데이트 + 롤백 | 서버가 없어 모든 적립·차감이 즉시 성공하는 구조라, 먼저 반영하고 실패 시 되돌릴 상황이 없습니다. 필수 범위를 먼저 끝내느라 mock API 계층까지 만들지 못했습니다. | 지연·실패가 있는 mock API를 두고, 화면에 먼저 반영한 뒤 실패하면 그 key의 내역을 지우는 `rollback` 액션을 추가합니다. 잔액이 내역의 합이라 롤백은 "내역 한 줄 삭제"로 끝납니다. |
+| 테스트 | 시간 부족 | 지갑 reducer(중복 key, 잔액 부족), 잔액 계산, 채굴량 계산, 룰렛 남은 횟수가 React와 무관한 순수 함수라 단위 테스트부터 붙일 수 있습니다. |
+| 금 내역 기간별 그래프 | 필수 범위를 먼저 끝내느라 시간 부족 | 내역을 날짜별로 묶는 함수가 이미 있어 그 합계를 막대그래프로 그리면 됩니다. |
+| 만보기, 메시지함, 채굴 속도 미션 타일 | 걸음 센서, 외부 게임·광고주 연동이 필요한 기능이라 범위에서 뺐습니다. | "준비 중" 안내로 대신했습니다. |
+
+## 실제 앱과 다르게 한 부분
+- **행운추첨 → 룰렛**: 실제 앱은 회차제 추첨이라 개표 시각까지 기다려야 결과가 나옵니다. 시연이 어려워 광고 보고 돌리면 바로 결과가 나오는 룰렛으로 단순화했습니다.
+- **오퍼월 보상**: 실제 앱처럼 금이 아니라 채굴 속도로 지급합니다.
+- **이미지**: 캐릭터·금괴·브랜드 이미지는 저작권과 상표 때문에 이모지와 아이콘으로 대신했습니다.
+- **채굴 속도**: 시연하기 쉽도록 기본 속도에서 1분이면 상한까지 차게 했습니다.
+
+## 폴더 구조
+
+```
+src/
+├─ app/        화면 경로 (Expo Router). 파일 하나 = 화면 하나
+├─ features/   기능별 코드 (wallet, mining, ads, attendance, roulette, exchange, history, offer, ...)
+├─ data/       더미 데이터 (서버 대신)
+└─ utils/      날짜 등 공용 함수
+docs/          분석 문서, 설계 문서, 버그 리포트
+```
