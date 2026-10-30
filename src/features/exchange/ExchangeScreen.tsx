@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { errorMessage } from '@/api/client';
 import { groupsOf, productSections, type Product } from '@/data/products';
 import { COLORS } from '@/features/layout/theme';
 import { RewardPopup } from '@/features/reward/RewardPopup';
@@ -22,10 +23,11 @@ function createExchangeKey(productId: string): string {
 
 // 선물 탭 (실제 앱 배치): 보유 금 ⇅ 원화 카드 → ▼ 금 상품 / ▼ 기프티콘 → 브랜드별 가로 카드
 export default function ExchangeScreen() {
-  const { balance, isLoaded, canAfford, spend } = useWallet();
+  const { balance, isLoaded, canAfford, exchange } = useWallet();
   const [pending, setPending] = useState<Pending | null>(null);
   const [completed, setCompleted] = useState<Product | null>(null);
   const [popup, setPopup] = useState<'lacking' | 'guide' | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const handlePressProduct = (product: Product) => {
     if (!canAfford(product.cost)) {
@@ -43,10 +45,16 @@ export default function ExchangeScreen() {
       setPopup('lacking');
       return;
     }
-    // [교환하기]를 연타해도 key가 같아서 지갑이 한 번만 차감한다
-    spend({ amount: product.cost, title: product.fullName, source: 'exchange', key });
+    // [교환하기]를 연타해도 key가 같아서 서버가 한 번만 차감한다
+    // 낙관적 업데이트: 잔액을 먼저 줄이고 완료 팝업을 띄운 뒤, 서버가 실패하면 잔액을 되돌리고 실패를 알린다
     setPending(null);
     setCompleted(product);
+    exchange({ productId: product.id, amount: product.cost, title: product.fullName, source: 'exchange', key }).catch(
+      (e: unknown) => {
+        setCompleted(null);
+        setFailure(errorMessage(e));
+      },
+    );
   };
 
   return (
@@ -103,6 +111,15 @@ export default function ExchangeScreen() {
         value={completed?.fullName}
         message="구매 내역에서 확인할 수 있어요."
         onClose={() => setCompleted(null)}
+      />
+
+      <RewardPopup
+        visible={failure !== null}
+        icon="cloud-offline"
+        title="교환하지 못했어요"
+        message={`${failure ?? ''}\n보유 금은 원래대로 돌려놨어요.`}
+        buttonLabel="닫기"
+        onClose={() => setFailure(null)}
       />
 
       {/* 실제 앱과 같은 잔액 부족 안내 */}

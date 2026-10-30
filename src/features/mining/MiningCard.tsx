@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { errorMessage } from '@/api/client';
 import { watchAd } from '@/features/ads/ads';
 import { COLORS } from '@/features/layout/theme';
 import { RewardPopup } from '@/features/reward/RewardPopup';
@@ -15,10 +16,12 @@ function formatPercent(percent: number): string {
 }
 
 export function MiningCard() {
-  const { mined, isFull, isLoading, speedPercent, collect } = useMining();
+  const { mined, isFull, isLoading, speedPercent, collect, undoCollect } = useMining();
   const { earn } = useWallet();
   // 방금 주운 양. 값이 있으면 보상 팝업을 띄우고, 닫을 때까지 버튼을 막는다
   const [collected, setCollected] = useState<number | null>(null);
+  // 서버 적립이 실패했을 때 안내 문장
+  const [failure, setFailure] = useState<string | null>(null);
 
   const canCollect = !isLoading && mined > 0 && collected === null;
 
@@ -29,8 +32,13 @@ export function MiningCard() {
     watchAd(() => {
       const result = collect();
       if (result === null) return;
-      earn({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key });
+      // 낙관적 업데이트: 팝업과 잔액은 바로 보여 주고, 서버가 실패하면 되돌린다
       setCollected(result.amount);
+      earn({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key }).catch((e: unknown) => {
+        undoCollect(result.startedAt); // 채굴량도 주우기 전으로
+        setCollected(null);
+        setFailure(errorMessage(e));
+      });
     });
   };
 
@@ -75,6 +83,14 @@ export function MiningCard() {
         value={`+${formatGold(collected ?? 0)}`}
         message="지갑에 들어갔어요. 채굴은 처음부터 다시 시작해요."
         onClose={() => setCollected(null)}
+      />
+      <RewardPopup
+        visible={failure !== null}
+        icon="cloud-offline"
+        title="금을 줍지 못했어요"
+        message={`${failure ?? ''}\n채굴량은 그대로 남아 있어요.`}
+        buttonLabel="닫기"
+        onClose={() => setFailure(null)}
       />
     </View>
   );

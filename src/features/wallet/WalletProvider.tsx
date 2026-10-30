@@ -1,7 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, use, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
 
-import { initialTransactions } from '@/data/initialTransactions';
+import { errorMessage } from '@/api/client';
+import * as api from '@/api/wallet';
 
 import {
   getBalance,
@@ -10,64 +10,87 @@ import {
   type TransactionInput,
   type WalletState,
 } from './store';
-import type { GoldUnits } from './types';
-
-const STORAGE_KEY = 'wallet:state';
+import type { GoldUnits, Transaction } from './types';
 
 type WalletContextValue = WalletState & {
   balance: GoldUnits; // 내역에서 계산한 잔액
   isLoaded: boolean;
-  earn: (input: TransactionInput) => void;
-  spend: (input: TransactionInput) => void;
+  error: string | null; // 서버에서 내역을 못 불러왔을 때 안내 문장
+  refresh: () => Promise<void>;
+  // 아래 세 함수는 낙관적 업데이트: 화면에 먼저 반영하고, 서버가 실패하면 되돌린 뒤 에러를 던진다
+  earn: (input: TransactionInput) => Promise<void>;
+  exchange: (input: TransactionInput & { productId: string }) => Promise<void>;
+  devClear: (key: string) => Promise<void>;
   hasKey: (key: string) => boolean;
   canAfford: (amount: GoldUnits) => boolean;
-  reset: () => void; // 개발자 모드: 처음 설치한 상태(샘플 내역)로 되돌림
+  reset: () => Promise<void>; // 개발자 모드: 처음 설치한 상태(샘플 내역)로 되돌림
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
+// 지갑 = 서버의 금 내역(gold_transactions)을 화면에 보여 주는 곳
+// 진짜 기록은 서버에 있고, 여기 state는 화면용 사본이다
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(walletReducer, initialWalletState);
-  // 기기에서 불러오기가 끝났는지. 끝나기 전에 저장하면 저장된 데이터를 덮어쓰게 된다
   const [isLoaded, setIsLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // 앱이 켜지면 저장된 지갑을 불러옴. 처음 실행이면 샘플 내역(더미 데이터)으로 시작
-  useEffect(() => {
-    async function load() {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      if (saved === null) {
-        dispatch({ type: 'load', state: { transactions: initialTransactions } });
-      } else {
-        try {
-          dispatch({ type: 'load', state: JSON.parse(saved) });
-        } catch {
-          // 저장된 값이 깨져 있으면 무시하고 빈 지갑으로 시작
-        }
-      }
-      setIsLoaded(true);
-    }
-    load();
+  // 서버 응답을 화면 상태에 반영
+  const applyLoaded = useCallback((transactions: Transaction[]) => {
+    dispatch({ type: 'load', state: { transactions } });
+    setError(null);
+    setIsLoaded(true);
+  }, []);
+  const applyFailed = useCallback((e: unknown) => {
+    setError(errorMessage(e));
+    setIsLoaded(true);
   }, []);
 
-  // 불러오기가 끝난 뒤부터, 지갑이 바뀔 때마다 저장
+  // 서버에서 내 금 내역을 다시 받아 옴 (앱 시작, 오퍼 보상 지급 후 등)
+  const refresh = useCallback(
+    () => api.listGoldTransactions().then(applyLoaded, applyFailed),
+    [applyLoaded, applyFailed],
+  );
+
   useEffect(() => {
-    if (!isLoaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state, isLoaded]);
+    api.listGoldTransactions().then(applyLoaded, applyFailed);
+  }, [applyLoaded, applyFailed]);
 
   const value = useMemo<WalletContextValue>(() => {
     const balance = getBalance(state.transactions);
+
+    // ① 화면에 먼저 반영 → ② 서버 요청 → ③ 성공이면 서버 내역으로 교체, 실패면 되돌림
+    const optimistic = async (type: 'earn' | 'spend', input: TransactionInput, request: () => Promise<Transaction>) => {
+      dispatch({ type, input });
+      try {
+        dispatch({ type: 'confirm', tx: await request() });
+      } catch (e) {
+        dispatch({ type: 'rollback', key: input.key });
+        throw e;
+      }
+    };
+
     return {
       ...state,
       balance,
       isLoaded,
-      earn: (input) => dispatch({ type: 'earn', input }),
-      spend: (input) => dispatch({ type: 'spend', input }),
+      error,
+      refresh,
+      earn: (input) => optimistic('earn', input, () => api.earnGold(input)),
+      exchange: ({ productId, ...input }) =>
+        optimistic('spend', input, () => api.exchangeProduct(productId, input.key)),
+      devClear: (key) =>
+        optimistic('spend', { amount: balance, title: '개발자 모드 차감', source: 'dev', key }, () =>
+          api.devSpendGold(balance, key),
+        ),
       hasKey: (key) => state.transactions.some((tx) => tx.key === key),
       canAfford: (amount) => amount <= balance,
-      reset: () => dispatch({ type: 'load', state: { transactions: initialTransactions } }),
+      reset: async () => {
+        await api.devReset();
+        await refresh();
+      },
     };
-  }, [state, isLoaded]);
+  }, [state, isLoaded, error, refresh]);
 
   return <WalletContext value={value}>{children}</WalletContext>;
 }

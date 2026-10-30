@@ -9,8 +9,8 @@ import { formatTime } from '@/utils/date';
 // 출처별 아이콘
 const SOURCE_ICONS: Record<TransactionSource, ComponentProps<typeof Ionicons>['name']> = {
   mining: 'diamond',
-  attendance: 'calendar',
   message: 'mail',
+  offer: 'game-controller',
   exchange: 'gift',
   dev: 'construct',
 };

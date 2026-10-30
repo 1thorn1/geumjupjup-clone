@@ -11,7 +11,11 @@ export type TransactionInput = Pick<Transaction, 'amount' | 'title' | 'source' |
 export type WalletAction =
   | { type: 'earn'; input: TransactionInput }
   | { type: 'spend'; input: TransactionInput }
-  | { type: 'load'; state: WalletState };
+  | { type: 'load'; state: WalletState }
+  // 서버가 성공했을 때: 화면에 먼저 넣어 둔 내역을 서버가 만든 내역으로 바꾼다
+  | { type: 'confirm'; tx: Transaction }
+  // 서버가 실패했을 때: 화면에 먼저 넣어 둔 내역을 지운다 (= 잔액이 원래대로)
+  | { type: 'rollback'; key: string };
 
 export const initialWalletState: WalletState = {
   transactions: [],
@@ -30,8 +34,21 @@ function createId(): string {
 }
 
 export function walletReducer(state: WalletState, action: WalletAction): WalletState {
-  // 기기에 저장해 둔 내역으로 통째로 교체 (예전 형식에 있던 balance는 무시)
+  // 서버에서 받은 내역으로 통째로 교체
   if (action.type === 'load') return { transactions: action.state.transactions ?? [] };
+
+  if (action.type === 'confirm') {
+    const exists = state.transactions.some((tx) => tx.key === action.tx.key);
+    return {
+      transactions: exists
+        ? state.transactions.map((tx) => (tx.key === action.tx.key ? action.tx : tx))
+        : [action.tx, ...state.transactions],
+    };
+  }
+
+  if (action.type === 'rollback') {
+    return { transactions: state.transactions.filter((tx) => tx.key !== action.key) };
+  }
 
   const { input } = action;
 
