@@ -1,120 +1,131 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { getOffer, stepKey, stepReward } from '@/data/offers';
+import { errorMessage } from '@/api/client';
+import * as api from '@/api/offers';
 import { useMiningContext } from '@/features/mining/MiningProvider';
+import { useWallet } from '@/features/wallet/WalletProvider';
 
-const STORAGE_KEY = 'offer:state';
-// 단계를 완료한 뒤 보상이 지급되기까지 걸리는 시간 (실제로는 광고주 서버 확인 시간)
-export const PAYOUT_DELAY_MS = 3000;
+import type { Offer, Participation, Payout, StepReward } from './offer';
 
-type OfferState = {
-  joined: Record<string, string>;  // 미션 id → 참여한 시각 (ISO)
-  pending: Record<string, number>; // 단계 key → 지급될 시각 (밀리초). 있으면 "지급 대기"
-};
+// 지급 대기 중인 보상이 있을 때 서버에 "지급할 것 있나요?"를 묻는 간격
+const SETTLE_INTERVAL_MS = 1000;
 
+// 내 기록: 참여 목록과 단계 보상 목록을 함께 받아 옴
+function fetchMine(): Promise<[Participation[], StepReward[]]> {
+  return Promise.all([api.listMyParticipations(), api.listMyStepRewards()]);
+}
+
+// 단계 상태: 참여 가능 / 지급 대기 / 지급 완료
 export type StepStatus = 'available' | 'pending' | 'paid';
-
-// 방금 지급된 보상 (상세 화면이 팝업을 띄우는 데 씀)
-export type Payout = { key: string; title: string; percent: number; at: number };
+// 오퍼 상태 (목록 화면 배지): 참여 전 / 참여 중 / 완료 / 기한 만료
+export type OfferStatus = 'notJoined' | 'joined' | 'completed' | 'expired';
 
 type OfferContextValue = {
-  isJoined: (offerId: string) => boolean;
-  joinedAt: (offerId: string) => string | null;
-  stepStatus: (offerId: string, stepId: string) => StepStatus;
-  join: (offerId: string) => void;
-  completeStep: (offerId: string, stepId: string) => void;
-  lastPayout: Payout | null;
+  offers: Offer[];
+  isLoading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  getOffer: (offerId: string) => Offer | undefined;
+  participationOf: (offerId: string) => Participation | undefined;
+  offerStatus: (offerId: string) => OfferStatus;
+  stepStatus: (stepId: number) => StepStatus;
+  join: (offerId: string) => Promise<void>;
+  completeStep: (stepId: number) => Promise<void>;
+  lastPayout: (Payout & { at: number }) | null;
 };
 
 const OfferContext = createContext<OfferContextValue | null>(null);
 
-// 오퍼월 진행 상태(참여 중 / 지급 대기)를 앱 전체에서 공유하고 기기에 저장한다
-// "지급 완료"는 따로 저장하지 않고, 채굴 보상 내역에 단계 key가 있는지로 계산한다
+// 오퍼월: 서버의 오퍼 목록, 내 참여, 내 단계 보상을 화면에 공유한다
+// 지급은 서버가 한다. 앱은 지급 대기 중일 때 1초마다 정산을 요청하고, 지급되면 지갑·속도를 다시 받아 온다
 export function OfferProvider({ children }: { children: ReactNode }) {
-  const { hasBoostKey, addBoost } = useMiningContext();
-  const [state, setState] = useState<OfferState | null>(null);
-  const [lastPayout, setLastPayout] = useState<Payout | null>(null);
-  // 이미 지급 처리한 단계 key (상태가 반영되기 전 다음 확인에서 두 번 지급하지 않도록)
-  const paidRef = useRef(new Set<string>());
+  const { refresh: refreshWallet } = useWallet();
+  const { refreshBoosts } = useMiningContext();
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [participations, setParticipations] = useState<Participation[]>([]);
+  const [rewards, setRewards] = useState<StepReward[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastPayout, setLastPayout] = useState<(Payout & { at: number }) | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      try {
-        setState(saved ? JSON.parse(saved) : { joined: {}, pending: {} });
-      } catch {
-        setState({ joined: {}, pending: {} });
-      }
-    }
-    load();
+  // 서버 응답을 화면 상태에 반영
+  const applyMine = useCallback(([p, r]: [Participation[], StepReward[]]) => {
+    setParticipations(p);
+    setRewards(r);
+  }, []);
+  const applyAll = useCallback(
+    ([o, mine]: [Offer[], [Participation[], StepReward[]]]) => {
+      setOffers(o);
+      applyMine(mine);
+      setError(null);
+      setIsLoading(false);
+    },
+    [applyMine],
+  );
+  const applyFailed = useCallback((e: unknown) => {
+    setError(errorMessage(e));
+    setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (state === null) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+  // 내 기록(참여, 단계 보상)만 다시 받아 옴
+  const refreshMine = useCallback(() => fetchMine().then(applyMine), [applyMine]);
 
-  // 지급 대기 중인 단계가 있으면 0.5초마다 확인해서, 지급 시각이 지난 것을 지급한다
-  // 지급 시각을 저장해 두므로 앱을 껐다 켜도 시각이 지났으면 바로 지급된다
-  useEffect(() => {
-    if (state === null || Object.keys(state.pending).length === 0) return;
-    const id = setInterval(() => {
-      const now = Date.now();
-      const due = Object.entries(state.pending).filter(([, payAt]) => payAt <= now);
-      if (due.length === 0) return;
+  // 오퍼 목록 + 내 기록을 함께 다시 받아 옴 (목록 화면 당겨서 새로고침)
+  const refresh = useCallback(() => {
+    setIsLoading(true);
+    return Promise.all([api.listOffers(), fetchMine()]).then(applyAll, applyFailed);
+  }, [applyAll, applyFailed]);
 
-      for (const [key] of due) {
-        if (paidRef.current.has(key)) continue;
-        paidRef.current.add(key);
-        const [, offerId, stepId] = key.split(':');
-        const offer = getOffer(offerId);
-        const step = offer?.steps.find((s) => s.id === stepId);
-        if (!offer || !step) continue;
-        const percent = stepReward(offer, step);
-        addBoost({ title: `${offer.title} 미션`, percent, key, expiresAt: null });
-        setLastPayout({ key, title: offer.title, percent, at: now });
+  useEffect(() => {
+    Promise.all([api.listOffers(), fetchMine()]).then(applyAll, applyFailed);
+  }, [applyAll, applyFailed]);
+
+  // 지급 대기 중인 보상이 있으면 1초마다 서버에 정산을 요청한다
+  // 앱을 껐다 켜도 서버에 지급 예정 시각이 남아 있어서, 다음 정산 때 바로 지급된다
+  const hasPending = rewards.some((r) => r.status === 'pending');
+  useEffect(() => {
+    if (!hasPending) return;
+    const id = setInterval(async () => {
+      try {
+        const paid = await api.settleRewards();
+        if (paid.length === 0) return;
+        await Promise.all([refreshMine(), refreshWallet(), refreshBoosts()]);
+        setLastPayout({ ...paid[paid.length - 1], at: Date.now() });
+      } catch {
+        // 네트워크가 잠깐 끊겨도 다음 간격에 다시 시도한다
       }
-      setState((s) => {
-        if (s === null) return s;
-        const pending = { ...s.pending };
-        for (const [key] of due) delete pending[key];
-        return { ...s, pending };
-      });
-    }, 500);
+    }, SETTLE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [state, addBoost]);
+  }, [hasPending, refreshMine, refreshWallet, refreshBoosts]);
 
-  const value = useMemo<OfferContextValue>(
-    () => ({
-      isJoined: (offerId) => Boolean(state?.joined[offerId]),
-      joinedAt: (offerId) => state?.joined[offerId] ?? null,
-      stepStatus: (offerId, stepId) => {
-        const key = stepKey(offerId, stepId);
-        if (hasBoostKey(key)) return 'paid';
-        if (state?.pending[key] !== undefined) return 'pending';
-        return 'available';
+  const value = useMemo<OfferContextValue>(() => {
+    const participationOf = (offerId: string) => participations.find((p) => p.offerId === offerId);
+    return {
+      offers,
+      isLoading,
+      error,
+      refresh,
+      getOffer: (offerId) => offers.find((o) => o.id === offerId),
+      participationOf,
+      offerStatus: (offerId) => {
+        const p = participationOf(offerId);
+        if (!p) return 'notJoined';
+        if (p.status === 'completed') return 'completed';
+        if (Date.parse(p.expiresAt) < Date.now()) return 'expired';
+        return 'joined';
       },
-      join: (offerId) =>
-        setState((s) =>
-          s === null || s.joined[offerId]
-            ? s
-            : { ...s, joined: { ...s.joined, [offerId]: new Date().toISOString() } },
-        ),
-      // 이미 지급됐거나 지급 대기 중인 단계는 무시 (연타·중복 방지)
-      completeStep: (offerId, stepId) => {
-        const key = stepKey(offerId, stepId);
-        if (hasBoostKey(key)) return;
-        setState((s) =>
-          s === null || s.pending[key] !== undefined
-            ? s
-            : { ...s, pending: { ...s.pending, [key]: Date.now() + PAYOUT_DELAY_MS } },
-        );
+      stepStatus: (stepId) => rewards.find((r) => r.stepId === stepId)?.status ?? 'available',
+      join: async (offerId) => {
+        const p = await api.joinOffer(offerId);
+        setParticipations((list) => [...list.filter((x) => x.offerId !== offerId), p]);
+      },
+      completeStep: async (stepId) => {
+        const r = await api.completeStep(stepId);
+        setRewards((list) => [...list.filter((x) => x.stepId !== stepId), r]);
       },
       lastPayout,
-    }),
-    [state, hasBoostKey, lastPayout],
-  );
+    };
+  }, [offers, participations, rewards, isLoading, error, refresh, lastPayout]);
 
   return <OfferContext value={value}>{children}</OfferContext>;
 }

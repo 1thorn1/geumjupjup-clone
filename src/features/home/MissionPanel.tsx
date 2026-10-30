@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { missionTiles, type MissionTile } from '@/data/missionTiles';
-import { FEATURED_OFFER_ID, getOffer, totalReward } from '@/data/offers';
 import { COLORS } from '@/features/layout/theme';
+import { totalReward } from '@/features/offer/offer';
+import { useOffer } from '@/features/offer/OfferProvider';
 import { RewardPopup } from '@/features/reward/RewardPopup';
 
 // 속도 표기. 예: 1515 → '1,515'
@@ -19,16 +20,27 @@ function openOffer(offerId: string) {
 }
 
 // 홈 "▶ 채굴 속도 증가시키기" 영역
-// 노란 판의 미션 타일 7개는 외부 게임 연동이라 "준비 중", "미션달성하고 보상받기" 카드만 오퍼월로 이동
+// 미션 타일 7개 = 오퍼 7개 (서버 offers.tile_id로 연결). 누르면 그 오퍼 상세로, [전체 보기]는 오퍼 리스트로
 export function MissionPanel() {
+  const { offers } = useOffer();
   const [popup, setPopup] = useState<'guide' | 'soon' | null>(null);
-  const featured = getOffer(FEATURED_OFFER_ID);
+  const featured = offers.find((o) => o.isFeatured);
+
+  // 타일에 연결된 오퍼가 아직 없으면(불러오는 중, 서버 오류) 안내만 띄운다
+  const openTile = (tileId: string) => {
+    const offer = offers.find((o) => o.tileId === tileId);
+    if (offer) openOffer(offer.id);
+    else setPopup('soon');
+  };
 
   return (
     <View style={styles.wrap}>
       <View style={styles.header}>
         <Ionicons name="play" size={22} color={COLORS.gold} />
         <Text style={styles.title}>채굴 속도 증가시키기</Text>
+        <Pressable style={styles.guide} onPress={() => router.push('/offers')} accessibilityRole="button">
+          <Text style={styles.guideText}>전체 보기</Text>
+        </Pressable>
         <Pressable style={styles.guide} onPress={() => setPopup('guide')} accessibilityRole="button">
           <Text style={styles.guideText}>가이드</Text>
         </Pressable>
@@ -39,7 +51,7 @@ export function MissionPanel() {
         {[missionTiles.slice(0, 3), missionTiles.slice(3)].map((row, i) => (
           <View key={i} style={styles.panelRow}>
             {row.map((tile) => (
-              <Tile key={tile.id} tile={tile} onPress={() => setPopup('soon')} />
+              <Tile key={tile.id} tile={tile} onPress={() => openTile(tile.id)} />
             ))}
           </View>
         ))}
@@ -56,7 +68,7 @@ export function MissionPanel() {
           </View>
           <View style={styles.featuredBadge}>
             {/* 단계 보상을 모두 더한 값 */}
-            <Text style={styles.featuredBadgeText}>+{withComma(totalReward(featured))}%</Text>
+            <Text style={styles.featuredBadgeText}>+{withComma(totalReward(featured).percent)}%</Text>
           </View>
         </Pressable>
       ) : null}
@@ -65,14 +77,14 @@ export function MissionPanel() {
         visible={popup === 'guide'}
         icon="help-circle"
         title="채굴 속도 올리는 법"
-        message="미션을 완료하면 채굴 속도가 올라가요. 속도가 빠를수록 금이 더 빨리 쌓여요."
+        message="미션을 완료하면 금과 채굴 속도를 받아요. 속도가 빠를수록 금이 더 빨리 쌓여요."
         onClose={() => setPopup(null)}
       />
       <RewardPopup
         visible={popup === 'soon'}
         icon="construct"
-        title="준비 중이에요"
-        message="게임·앱 연동 미션은 준비 중이에요. 아래 미션달성하고 보상받기에서 먼저 참여해 보세요."
+        title="미션을 불러오지 못했어요"
+        message="서버에서 미션 목록을 아직 받지 못했어요. 잠시 후 다시 시도해 주세요."
         buttonLabel="닫기"
         onClose={() => setPopup(null)}
       />
