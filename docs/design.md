@@ -1,7 +1,11 @@
 # 설계 문서
 
 금줍줍 모작의 폴더 구조, 상태 관리 방식, 더미 데이터 구조.
-실제 앱을 분석한 내용은 [analysis.md](analysis.md)에 있다.
+실제 앱을 분석한 내용은 [analysis.md](analysis.md), 서버 API와 DB 설계는 [api-db.md](api-db.md)에 있다.
+
+> **10/31 변경:** 지갑·속도 보상·오퍼월을 기기 저장(AsyncStorage)에서 **Supabase 서버**로 옮겼다.
+> 화면 → Provider → `src/api/` → Supabase(DB) 순서로 데이터가 흐르고, 진짜 기록은 서버에 있다.
+> 아래 2-6(저장)과 3(더미 데이터)은 서버 연동 전 구조를 함께 남겨 둔 것이다.
 
 ## 1. 폴더 구조
 
@@ -77,7 +81,8 @@ flowchart TD
 |---|---|---|
 | `useState` (화면 안) | 그 화면에서만 쓰고 나가면 사라져도 되는 값 | 팝업 열림 여부, 선택한 탭, 룰렛 회전 중 |
 | Context Provider (앱 전체) | 여러 화면이 같이 봐야 하는 값 | 지갑 내역, 채굴 상태, 오퍼월 진행 |
-| AsyncStorage (기기) | 앱을 껐다 켜도 남아야 하는 값 | Provider 상태를 그대로 저장 |
+| Supabase (서버) | 사용자별로 남아야 하는 기록 | 금 내역, 속도 보상, 오퍼 참여·지급, 교환 |
+| AsyncStorage (기기) | 이 기기에서만 의미 있는 값 | 채굴 시작 시각, 로그인 세션 |
 
 전역 상태 라이브러리(Redux, Zustand 등)는 쓰지 않았다. 전역 상태가 3개뿐이고 각각 독립적이라 React 기본 기능(Context + useReducer/useState)으로 충분했다.
 
@@ -88,7 +93,7 @@ flowchart TD
     <OfferProvider>     {/* 오퍼월: 참여·지급 대기 */}
       <Stack>…</Stack>
 ```
-- `OfferProvider`는 단계 보상을 `MiningProvider`의 `addBoost`로 지급하므로 **반드시 그 안에** 있어야 한다.
+- `OfferProvider`는 보상이 지급되면 지갑(`refresh`)과 속도 보상(`refreshBoosts`)을 다시 받아 오므로 **두 Provider 안에** 있어야 한다.
 - 지갑과 채굴은 서로를 모른다. 두 Provider를 함께 쓰는 곳은 화면(`MiningCard`)이다.
   금 줍기 = `collect()`로 채굴량을 꺼냄 → `earn()`으로 지갑에 적립.
 
@@ -138,7 +143,8 @@ function getBalance(transactions) {
 시작 시각만 저장하고 `(지금 − 시작 시각) × 속도`로 계산하면, 앱을 다시 켰을 때 그동안 쌓인 양이 바로 나온다.
 화면은 `useMining`이 1초마다 `now`만 갱신해서 다시 계산한다.
 
-### 2-6. 저장 (AsyncStorage)
+### 2-6. 저장 (서버 연동 전: AsyncStorage)
+서버 연동 후에는 지갑·속도 보상·오퍼가 Supabase에 저장되고, Provider는 앱 시작 때 `src/api/`로 불러온다. 금 줍기와 교환은 화면에 먼저 반영하고 서버가 실패하면 되돌린다(낙관적 업데이트). 자세한 흐름은 [api-db.md](api-db.md).
 | 저장 키 | Provider | 내용 |
 |---|---|---|
 | `wallet:state` | WalletProvider | `{ transactions }` |
