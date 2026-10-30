@@ -12,10 +12,10 @@
 ## 실행 방법
 
 ### 1. APK 설치 (안드로이드)
-- 설치 페이지 (QR 코드): https://expo.dev/accounts/ddabongnyang2/projects/geumjupjup-clone/builds/62bbbade-5a41-4f86-8690-b278180a52ba
-- APK 파일 직접 받기: https://expo.dev/artifacts/eas/dE8uikaQPrrb-FQuTEtkR5Ls9fwJLIZSGviyFf6d9mA.apk
+- 설치 페이지 (QR 코드): https://expo.dev/accounts/ddabongnyang2/projects/geumjupjup-clone/builds/710e1209-eb06-413d-879f-8f86dadefd41
+- APK 파일 직접 받기: https://expo.dev/artifacts/eas/c1-87TYkdrbupmL13I33RXfR4fdPjVbUZVg6xwoC8C0.apk
 - 안드로이드 휴대폰에서 링크를 열거나 QR 코드를 찍어 설치합니다. "출처를 알 수 없는 앱" 설치 허용이 필요할 수 있습니다.
-- ⚠️ 위 링크는 서버 연동 **전** 빌드입니다. 서버 연동 빌드는 Supabase 배포 후 링크를 바꿉니다.
+- 클라우드 Supabase 서버에 연결된 빌드라 인터넷 연결이 필요합니다. 처음 실행하면 기기별 익명 사용자가 만들어지고 샘플 금 내역이 지급됩니다.
 
 ### 2. 소스에서 실행
 Node.js(LTS)와 서버(Supabase)가 필요합니다.
