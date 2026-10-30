@@ -10,8 +10,9 @@
 ## 실행 방법
 
 ### 1. APK 설치 (안드로이드)
-- APK 다운로드: (빌드 완료 후 링크 추가 예정)
-- 휴대폰에서 링크를 열어 설치합니다. "출처를 알 수 없는 앱" 설치 허용이 필요할 수 있습니다.
+- 설치 페이지 (QR 코드): https://expo.dev/accounts/ddabongnyang2/projects/geumjupjup-clone/builds/62bbbade-5a41-4f86-8690-b278180a52ba
+- APK 파일 직접 받기: https://expo.dev/artifacts/eas/dE8uikaQPrrb-FQuTEtkR5Ls9fwJLIZSGviyFf6d9mA.apk
+- 안드로이드 휴대폰에서 링크를 열거나 QR 코드를 찍어 설치합니다. "출처를 알 수 없는 앱" 설치 허용이 필요할 수 있습니다.
 
 ### 2. 소스에서 실행
 Node.js(LTS)가 필요합니다.
