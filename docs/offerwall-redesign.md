@@ -36,10 +36,10 @@
 | 오퍼는 누구 것인가 | 금줍줍이 직접 운영 | **회사(provider)**의 캠페인 |
 | 미션 타일 | 타일 1개 = 오퍼 1개 | 타일 1개 = **회사 1곳** (회사의 캠페인 목록이 열림) |
 | 지급을 시작하는 쪽 | 앱이 1초마다 정산 요청 | **회사가 포스트백**을 보냄 (mock 회사가 대신) |
-| 보상 | 금 + 채굴 속도 | **채굴 속도 %만** (실제 앱과 같게) |
+| 보상 | 채굴 속도 %만 (PR #41에서 이미 바꿈) | 그대로 |
 | 중복 제한 | 같은 오퍼·같은 단계 | + **같은 앱은 회사가 달라도 한 번만** |
 
-보상을 속도 %만으로 바꾸면 과제 PDF의 "지급 후 잔액 갱신"과는 다르다. 분석으로 확인한 실제 구조를 따르고, README에 이유를 적는다.
+보상을 속도 %만 주는 것은 PR #41·#42에서 이미 반영했다. 과제 PDF의 "지급 후 잔액 갱신"과는 다르지만, 분석으로 확인한 실제 구조를 따랐고 이유는 README에 적었다.
 
 ## 3. DB 변경
 
@@ -80,7 +80,7 @@ erDiagram
 ### 바뀌는 테이블
 - `offers`: `provider_id` 추가, `tile_id`는 `offer_providers`로 이동. `app_package`(대상 앱 식별자) 추가
 - `offers.campaign_type`: `social`(구독·팔로우), `install`, `signup`, `game_single`, `game_multi`, `shopping`
-- `offer_step_rewards`: `reward_gold` 제거(속도만), `postback_id` 추가
+- `offer_step_rewards`: `postback_id` 추가 (`reward_gold`는 PR #41에서 이미 제거)
 - 중복 앱 제한: `offer_participations`에 `app_package`를 복사해 두고 `(user_id, app_package)` 유니크
 
 ## 4. API 변경
