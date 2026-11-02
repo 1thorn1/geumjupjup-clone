@@ -15,7 +15,7 @@
 | OF-2 | 오퍼 상세: 단계별 보상과 단계 상태(참여 가능 / 지급 대기 / 지급 완료), 참여 기한 |
 | OF-3 | 참여: 같은 오퍼에는 한 번만 참여. 참여하면 기한이 시작된다 |
 | OF-4 | 단계 완료: 참여 중이고, 기한 안이고, 앞 단계를 끝냈을 때만. 완료하면 **지급 대기** |
-| OF-5 | 지연 지급: 완료 3초 뒤 **지급 완료** → 금 내역과 속도 보상이 생기고 잔액이 늘어난다 |
+| OF-5 | 지연 지급: 완료 3초 뒤 **지급 완료** → 채굴 속도 보상이 생긴다 (실제 앱처럼 오퍼 보상은 금이 아니라 속도) |
 | OF-6 | 중복 방지: 같은 단계를 연타하거나 다시 요청해도 보상은 한 번 |
 
 ### 지갑·교환
@@ -67,7 +67,7 @@ Idempotency-Key: offer:stock-signup:6
 ```json
 201 Created
 { "data": { "stepId": 6, "status": "pending", "payAt": "2026-10-31T10:00:03Z",
-            "reward": { "gold": 100000000, "boostPercent": 100 } } }
+            "reward": { "boostPercent": 100 } } }
 ```
 
 ### 2-2. Supabase로 구현한 모습
@@ -103,7 +103,6 @@ erDiagram
   OFFER_STEPS ||--o{ OFFER_STEP_REWARDS : rewards
   PROFILES ||--o{ GOLD_TRANSACTIONS : owns
   PROFILES ||--o{ BOOSTS : owns
-  OFFER_STEP_REWARDS |o--o| GOLD_TRANSACTIONS : pays
   OFFER_STEP_REWARDS |o--o| BOOSTS : pays
   PROFILES ||--o{ EXCHANGES : requests
   PRODUCTS ||--o{ EXCHANGES : ordered
@@ -115,7 +114,7 @@ erDiagram
 |---|---|---|
 | `profiles` | 사용자 (익명 로그인 id) | `id` = `auth.users.id` |
 | `offers` | 오퍼(캠페인). 홈 미션 타일 하나 = 오퍼 하나 | `tile_id` unique |
-| `offer_steps` | 단계와 단계별 보상 (금 + 속도) | `(offer_id, step_order)` unique |
+| `offer_steps` | 단계와 단계별 보상 (채굴 속도 %) | `(offer_id, step_order)` unique |
 | `offer_participations` | 참여 (참여 중 / 완료) | `(user_id, offer_id)` unique → 한 번만 참여 |
 | `offer_step_rewards` | 단계 보상 지급 (pending → paid) | `(participation_id, step_id)` unique → 한 번만 완료 |
 | `gold_transactions` | 금 내역. 잔액 = 합 | `(user_id, idempotency_key)` unique, `amount > 0` |
@@ -128,7 +127,8 @@ erDiagram
 - **금은 `bigint`.** 1 = 10⁻¹²g. 소수 계산 오차가 없다
 - **보상 값 복사.** `offer_step_rewards`에 완료 순간의 보상을 복사해 둔다. 나중에 오퍼 보상이 바뀌어도 이미 약속한 보상은 그대로다
 - **기한 만료는 저장하지 않는다.** `expires_at`과 지금 시각으로 계산한다
-- **출처 추적.** 금 내역과 속도 보상은 어느 단계 보상(`offer_step_reward_id`)이나 교환(`exchange_id`)에서 생겼는지 가리킨다
+- **출처 추적.** 속도 보상은 어느 단계 보상(`offer_step_reward_id`)에서, 금 차감 내역은 어느 교환(`exchange_id`)에서 생겼는지 가리킨다
+- **오퍼 보상은 속도만.** 10/31 첫 버전은 단계마다 금도 줬지만, 실제 앱 구조에 맞춰 마이그레이션 `20261102000000_offer_rewards_boost_only.sql`에서 금 보상 칸을 지웠다. 이미 지급된 오퍼 금 내역은 기록으로 남겨 둔다
 - 채굴 시작 시각은 기기에 둔다. 채굴량은 시작 시각과 속도 보상으로 계산하는 값이고, 서버는 적립할 때 상한만 검사한다
 
 ### 3-3. 오퍼 상태 변화
@@ -136,7 +136,6 @@ erDiagram
 (참여 전) ──join_offer──▶ offer_participations: joined
    단계 완료 ──complete_offer_step──▶ offer_step_rewards: pending (pay_at = 지금 + 3초)
    pay_at 지남 ──settle_my_offer_rewards──▶ paid
-                 + gold_transactions 한 줄 (잔액 증가)
                  + boosts 한 줄 (속도 증가)
    모든 단계 paid ──▶ offer_participations: completed
 ```
@@ -147,7 +146,7 @@ erDiagram
 
 - **RLS(행 단위 보안)**: 모든 테이블에 켜져 있다. 오퍼·단계·상품은 누구나 조회, 나머지는 `user_id = 내 id`인 행만 조회
 - **쓰기 정책 없음**: 앱은 테이블에 직접 쓸 수 없다. 모든 쓰기는 DB 함수(`security definer`)로만 하고, 함수 안에서 규칙을 검사한다
-- **트랜잭션과 잠금**: 지급(보상 상태 + 금 내역 + 속도)은 한 함수 안에서 함께 처리된다. 교환·정산은 사용자 행을 잠가(`for update`) 동시 요청을 한 줄로 세운다
+- **트랜잭션과 잠금**: 지급(보상 상태 + 속도 보상 + 참여 완료)은 한 함수 안에서 함께 처리된다. 교환·정산은 사용자 행을 잠가(`for update`) 동시 요청을 한 줄로 세운다
 
 검증 (로컬 Supabase에서 실행)
 - 참여 전 단계 완료 → `NOT_PARTICIPATING`, 앞 단계 건너뛰기 → `STEP_LOCKED`
