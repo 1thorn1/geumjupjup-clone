@@ -1,6 +1,7 @@
 import { createContext, use, useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
 
 import { errorMessage } from '@/api/client';
+import * as miningApi from '@/api/mining';
 import * as api from '@/api/wallet';
 
 import {
@@ -17,8 +18,10 @@ type WalletContextValue = WalletState & {
   isLoaded: boolean;
   error: string | null; // 서버에서 내역을 못 불러왔을 때 안내 문장
   refresh: () => Promise<void>;
-  // 아래 세 함수는 낙관적 업데이트: 화면에 먼저 반영하고, 서버가 실패하면 되돌린 뒤 에러를 던진다
+  // 아래 함수들은 낙관적 업데이트: 화면에 먼저 반영하고, 서버가 실패하면 되돌린 뒤 에러를 던진다
   earn: (input: TransactionInput) => Promise<void>;
+  // 금 줍기: 앱이 계산한 예상량을 먼저 보여 주고, 서버가 계산한 진짜 내역으로 바꾼다. 진짜 내역을 돌려준다
+  collectMining: (estimate: TransactionInput) => Promise<Transaction>;
   exchange: (input: TransactionInput & { productId: string }) => Promise<void>;
   devClear: (key: string) => Promise<void>;
   hasKey: (key: string) => boolean;
@@ -63,7 +66,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const optimistic = async (type: 'earn' | 'spend', input: TransactionInput, request: () => Promise<Transaction>) => {
       dispatch({ type, input });
       try {
-        dispatch({ type: 'confirm', tx: await request() });
+        const tx = await request();
+        // 서버 내역의 key가 화면 임시 내역과 다를 수도 있으니(금 줍기) 임시 내역을 빼고 넣는다
+        dispatch({ type: 'rollback', key: input.key });
+        dispatch({ type: 'confirm', tx });
+        return tx;
       } catch (e) {
         dispatch({ type: 'rollback', key: input.key });
         throw e;
@@ -76,13 +83,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       isLoaded,
       error,
       refresh,
-      earn: (input) => optimistic('earn', input, () => api.earnGold(input)),
-      exchange: ({ productId, ...input }) =>
-        optimistic('spend', input, () => api.exchangeProduct(productId, input.key)),
-      devClear: (key) =>
-        optimistic('spend', { amount: balance, title: '개발자 모드 차감', source: 'dev', key }, () =>
+      earn: async (input) => {
+        await optimistic('earn', input, () => api.earnGold(input));
+      },
+      collectMining: (estimate) => optimistic('earn', estimate, miningApi.collectMining),
+      exchange: async ({ productId, ...input }) => {
+        await optimistic('spend', input, () => api.exchangeProduct(productId, input.key));
+      },
+      devClear: async (key) => {
+        await optimistic('spend', { amount: balance, title: '개발자 모드 차감', source: 'dev', key }, () =>
           api.devSpendGold(balance, key),
-        ),
+        );
+      },
       hasKey: (key) => state.transactions.some((tx) => tx.key === key),
       canAfford: (amount) => amount <= balance,
       reset: async () => {

@@ -4,7 +4,7 @@ import type { GoldUnits, Transaction } from '@/features/wallet/types';
 import { rpc, select } from './client';
 
 // DB의 gold_transactions 한 줄
-type GoldTransactionRow = {
+export type GoldTransactionRow = {
   id: number;
   type: Transaction['type'];
   amount: number;
@@ -14,7 +14,7 @@ type GoldTransactionRow = {
   created_at: string;
 };
 
-function toTransaction(row: GoldTransactionRow): Transaction {
+export function toTransaction(row: GoldTransactionRow): Transaction {
   return {
     id: String(row.id),
     type: row.type,
@@ -38,7 +38,7 @@ export async function listGoldTransactions(): Promise<Transaction[]> {
   return rows.map(toTransaction);
 }
 
-// POST /me/gold-transactions: 금 적립 (금 줍기, 개발자 모드)
+// POST /me/gold-transactions: 금 적립 (개발자 모드만. 금 줍기는 api/mining.ts의 collectMining)
 export async function earnGold(input: TransactionInput): Promise<Transaction> {
   const row = await rpc<GoldTransactionRow>('earn_gold', {
     p_amount: input.amount,

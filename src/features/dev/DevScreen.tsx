@@ -90,8 +90,7 @@ export default function DevScreen() {
           <DevButton
             label="바로 상한까지 채우기"
             onPress={() => {
-              devFill();
-              setMessage('채굴량을 상한까지 채웠어요');
+              run(devFill(), '채굴량을 상한까지 채웠어요');
             }}
           />
         </Section>
