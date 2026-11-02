@@ -12,8 +12,8 @@
 ## 실행 방법
 
 ### 1. APK 설치 (안드로이드)
-- 설치 페이지 (QR 코드): https://expo.dev/accounts/ddabongnyang2/projects/geumjupjup-clone/builds/710e1209-eb06-413d-879f-8f86dadefd41
-- APK 파일 직접 받기: https://expo.dev/artifacts/eas/c1-87TYkdrbupmL13I33RXfR4fdPjVbUZVg6xwoC8C0.apk
+- 설치 페이지 (QR 코드): https://expo.dev/accounts/ddabongnyang2/projects/geumjupjup-clone/builds/cefdb6a3-155c-4ad3-894c-71c942863974
+- APK 파일 직접 받기: https://expo.dev/artifacts/eas/9j1uI2721x5b6d3EEz5-Z_uGckNqDr2ezCOqG8IzM-U.apk
 - 안드로이드 휴대폰에서 링크를 열거나 QR 코드를 찍어 설치합니다. "출처를 알 수 없는 앱" 설치 허용이 필요할 수 있습니다.
 - 클라우드 Supabase 서버에 연결된 빌드라 인터넷 연결이 필요합니다. 처음 실행하면 기기별 익명 사용자가 만들어지고 샘플 금 내역이 지급됩니다.
 
