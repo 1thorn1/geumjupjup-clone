@@ -14,7 +14,7 @@ type Props = {
 // 교환 전 확인 팝업: 필요한 금과 교환 후 남는 금을 보여 준다
 export function ExchangeConfirmModal({ product, balance, onCancel, onConfirm }: Props) {
   return (
-    <Modal visible={product !== null} transparent animationType="fade" onRequestClose={onCancel}>
+    <Modal visible={product !== null} transparent animationType="none" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
         {product && (
           <View style={styles.card}>

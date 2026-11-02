@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
 
 type Props = {
   visible: boolean;
@@ -14,6 +13,7 @@ type Props = {
 };
 
 // 보상·안내를 띄우는 공통 팝업 (금 줍기, 출석, 룰렛, 교환 완료, 잔액 부족 등)
+// 커졌다 작아지는 연출 없이 바로 뜨고 바로 닫힌다
 export function RewardPopup({
   visible,
   title,
@@ -24,10 +24,10 @@ export function RewardPopup({
   onClose,
 }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         {visible && (
-          <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.card}>
+          <View style={styles.card}>
             <View style={styles.icon}>
               <Ionicons name={icon} size={36} color="#E8A100" />
             </View>
@@ -37,7 +37,7 @@ export function RewardPopup({
             <Pressable style={styles.button} onPress={onClose} accessibilityRole="button">
               <Text style={styles.buttonText}>{buttonLabel}</Text>
             </Pressable>
-          </Animated.View>
+          </View>
         )}
       </View>
     </Modal>
