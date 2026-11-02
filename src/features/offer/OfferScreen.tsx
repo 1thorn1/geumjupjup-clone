@@ -6,10 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { errorMessage } from '@/api/client';
 import { COLORS } from '@/features/layout/theme';
 import { RewardPopup } from '@/features/reward/RewardPopup';
-import { formatKrw, unitsToKrw } from '@/features/wallet/gold';
 import { formatMonthDay } from '@/utils/date';
 
-import { stepReward, type Offer } from './offer';
+import { rewardText, stepReward, type Offer } from './offer';
 import { useOffer, type StepStatus } from './OfferProvider';
 
 const STATUS_LABEL: Record<StepStatus, string> = {
@@ -17,14 +16,6 @@ const STATUS_LABEL: Record<StepStatus, string> = {
   pending: '지급 대기',
   paid: '지급 완료',
 };
-
-// 보상 표기. 예: 금 +3원 · 속도 +75%
-export function rewardText(gold: number, percent: number): string {
-  const parts: string[] = [];
-  if (gold > 0) parts.push(`금 +${formatKrw(unitsToKrw(gold))}`);
-  if (percent > 0) parts.push(`속도 +${percent}%`);
-  return parts.join(' · ');
-}
 
 // 미션 상세 (/offer/[id]): 큰 이미지 → 제목·기한 → 단계 목록 → 하단 버튼
 // 참여 전 → [참여하고 적립받기] → 참여 중 → [다음 단계 완료하기] → 지급 대기(3초) → 지급 완료
@@ -132,18 +123,15 @@ function OfferDetail({ offer }: { offer: Offer }) {
           <Text style={styles.title}>{offer.title}</Text>
           <Text style={styles.deadline}>⏳ {deadline}</Text>
 
-          {offer.steps.map((step, i) => {
-            const r = stepReward(offer, step);
-            return (
-              <View key={step.id} style={styles.step}>
-                <View style={[styles.chip, chipStyles[statuses[i]]]}>
-                  <Text style={[styles.chipText, chipTextStyles[statuses[i]]]}>{STATUS_LABEL[statuses[i]]}</Text>
-                </View>
-                <Text style={styles.stepLabel}>{step.label}</Text>
-                <Text style={styles.stepPercent}>{rewardText(r.gold, r.percent)}</Text>
+          {offer.steps.map((step, i) => (
+            <View key={step.id} style={styles.step}>
+              <View style={[styles.chip, chipStyles[statuses[i]]]}>
+                <Text style={[styles.chipText, chipTextStyles[statuses[i]]]}>{STATUS_LABEL[statuses[i]]}</Text>
               </View>
-            );
-          })}
+              <Text style={styles.stepLabel}>{step.label}</Text>
+              <Text style={styles.stepPercent}>{rewardText(stepReward(offer, step))}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
 
@@ -159,8 +147,8 @@ function OfferDetail({ offer }: { offer: Offer }) {
       <RewardPopup
         visible={payout !== null}
         title="미션 보상 지급 완료!"
-        value={rewardText(payout?.rewardGold ?? 0, payout?.rewardBoostPercent ?? 0)}
-        message={`${offer.title} 미션 보상이 지급됐어요.`}
+        value={rewardText(payout?.rewardBoostPercent ?? 0)}
+        message={`${offer.title} 미션 보상으로 채굴 속도가 올라갔어요.`}
         onClose={() => setSeenAt(payout?.at ?? Date.now())}
       />
       <RewardPopup

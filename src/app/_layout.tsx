@@ -8,7 +8,7 @@ export default function RootLayout() {
   return (
     <WalletProvider>
       <MiningProvider>
-        {/* 오퍼 보상이 지급되면 지갑과 속도 보상을 다시 받아 와야 해서 두 Provider 안에 둔다 */}
+        {/* 오퍼 보상(채굴 속도)이 지급되면 속도 보상을 다시 받아 와야 해서 MiningProvider 안에 둔다 */}
         <OfferProvider>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -3,7 +3,6 @@ import { createContext, use, useCallback, useEffect, useMemo, useState, type Rea
 import { errorMessage } from '@/api/client';
 import * as api from '@/api/offers';
 import { useMiningContext } from '@/features/mining/MiningProvider';
-import { useWallet } from '@/features/wallet/WalletProvider';
 
 import type { Offer, Participation, Payout, StepReward } from './offer';
 
@@ -37,9 +36,8 @@ type OfferContextValue = {
 const OfferContext = createContext<OfferContextValue | null>(null);
 
 // 오퍼월: 서버의 오퍼 목록, 내 참여, 내 단계 보상을 화면에 공유한다
-// 지급은 서버가 한다. 앱은 지급 대기 중일 때 1초마다 정산을 요청하고, 지급되면 지갑·속도를 다시 받아 온다
+// 지급은 서버가 한다. 앱은 지급 대기 중일 때 1초마다 정산을 요청하고, 지급되면 속도 보상을 다시 받아 온다
 export function OfferProvider({ children }: { children: ReactNode }) {
-  const { refresh: refreshWallet } = useWallet();
   const { refreshBoosts } = useMiningContext();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [participations, setParticipations] = useState<Participation[]>([]);
@@ -89,14 +87,14 @@ export function OfferProvider({ children }: { children: ReactNode }) {
       try {
         const paid = await api.settleRewards();
         if (paid.length === 0) return;
-        await Promise.all([refreshMine(), refreshWallet(), refreshBoosts()]);
+        await Promise.all([refreshMine(), refreshBoosts()]);
         setLastPayout({ ...paid[paid.length - 1], at: Date.now() });
       } catch {
         // 네트워크가 잠깐 끊겨도 다음 간격에 다시 시도한다
       }
     }, SETTLE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [hasPending, refreshMine, refreshWallet, refreshBoosts]);
+  }, [hasPending, refreshMine, refreshBoosts]);
 
   const value = useMemo<OfferContextValue>(() => {
     const participationOf = (offerId: string) => participations.find((p) => p.offerId === offerId);

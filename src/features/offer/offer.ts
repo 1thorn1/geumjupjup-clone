@@ -1,13 +1,11 @@
-import type { GoldUnits } from '@/features/wallet/types';
-
 // 오퍼(캠페인). 서버 offers + offer_steps 테이블에서 온다
+// 보상은 실제 금줍줍처럼 채굴 속도(%)만 준다. 금은 "광고 보고 금 줍기"로만 들어온다
 export type CampaignType = 'app_install' | 'signup' | 'game' | 'survey' | 'apply';
 
 export type OfferStep = {
   id: number;
   order: number;
   label: string;              // 예: '앱 설치하기'
-  rewardGold: GoldUnits;      // 기본 금 보상
   rewardBoostPercent: number; // 기본 속도 보상 (%)
 };
 
@@ -39,7 +37,6 @@ export type StepReward = {
   id: number;
   stepId: number;
   status: 'pending' | 'paid';
-  rewardGold: GoldUnits;
   rewardBoostPercent: number;
   payAt: string;
 };
@@ -49,7 +46,6 @@ export type Payout = {
   rewardId: number;
   offerId: string;
   offerTitle: string;
-  rewardGold: GoldUnits;
   rewardBoostPercent: number;
 };
 
@@ -61,21 +57,17 @@ export const CAMPAIGN_LABEL: Record<CampaignType, string> = {
   apply: '신청',
 };
 
-// 배수까지 적용한 단계 보상 (서버가 완료 시점에 같은 식으로 계산해 저장한다)
-export function stepReward(offer: Offer, step: OfferStep): { gold: GoldUnits; percent: number } {
-  return {
-    gold: Math.round(step.rewardGold * offer.multiplier),
-    percent: Math.round(step.rewardBoostPercent * offer.multiplier),
-  };
+// 배수까지 적용한 단계 보상 (%). 서버가 완료 시점에 같은 식으로 계산해 저장한다
+export function stepReward(offer: Offer, step: OfferStep): number {
+  return Math.round(step.rewardBoostPercent * offer.multiplier);
 }
 
-// 미션 전체를 다 하면 받는 보상 합계
-export function totalReward(offer: Offer): { gold: GoldUnits; percent: number } {
-  return offer.steps.reduce(
-    (sum, step) => {
-      const r = stepReward(offer, step);
-      return { gold: sum.gold + r.gold, percent: sum.percent + r.percent };
-    },
-    { gold: 0, percent: 0 },
-  );
+// 미션 전체를 다 하면 받는 속도 합계 (%)
+export function totalReward(offer: Offer): number {
+  return offer.steps.reduce((sum, step) => sum + stepReward(offer, step), 0);
+}
+
+// 속도 보상 표기. 예: 1515 → '속도 +1,515%'
+export function rewardText(percent: number): string {
+  return `속도 +${String(percent).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}%`;
 }
