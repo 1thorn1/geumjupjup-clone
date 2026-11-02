@@ -22,7 +22,7 @@
 | ID | 요구사항 |
 |---|---|
 | WL-1 | 잔액 = 금 내역의 합 (잔액은 저장하지 않는다) |
-| WL-2 | 금 줍기: 채굴량을 적립. 한 번에 채굴 상한을 넘을 수 없다 |
+| WL-2 | 금 줍기: 채굴량을 **서버가 계산**해 적립한다. 앱은 금액을 보내지 않는다. 한 번에 채굴 상한을 넘을 수 없다 |
 | EX-1 | 교환: 가격은 서버의 상품 표에서 읽고, 잔액이 부족하면 거절. 동시에 여러 번 눌러도 잔액이 음수가 되지 않는다 |
 
 ### 앱 쪽 연동
@@ -49,7 +49,9 @@
 | POST | `/offers/{offerId}/steps/{stepId}/completions` | 단계 완료 → 지급 대기 | 201 | 409 NOT_PARTICIPATING, STEP_LOCKED, OFFER_EXPIRED |
 | POST | `/me/offer-rewards/settlements` | 지급 시각이 지난 보상 지급 | 200 (방금 지급된 목록) | |
 | GET | `/me/gold-transactions` | 내 금 내역 (잔액 = 합) | 200 | |
-| POST | `/me/gold-transactions` | 금 적립 (금 줍기) | 201 | 422 INVALID_AMOUNT |
+| GET | `/me/mining` | 이번 채굴 시작 시각 | 200 | |
+| POST | `/me/mining/collections` | 금 줍기 (본문 없음, 서버가 금액 계산) | 201 | 409 NOTHING_TO_COLLECT |
+| POST | `/me/gold-transactions` | 금 적립 (개발자 모드만) | 201 | 422 INVALID_SOURCE, INVALID_AMOUNT |
 | POST | `/exchanges` | 교환 신청 | 201 | 409 INSUFFICIENT_BALANCE |
 | GET | `/me/boosts` | 내 속도 보상 | 200 | |
 | POST | `/me/boosts` | 속도 보상 (출석, 룰렛) | 201 | 422 INVALID_AMOUNT |
@@ -82,6 +84,8 @@ Supabase는 테이블마다 조회 API(PostgREST)를 자동으로 만들고, 규
 | `POST .../completions` | `POST /rest/v1/rpc/complete_offer_step` | `offers.completeStep` |
 | `POST /me/offer-rewards/settlements` | `POST /rest/v1/rpc/settle_my_offer_rewards` | `offers.settleRewards` |
 | `GET /me/gold-transactions` | `GET /rest/v1/gold_transactions` | `wallet.listGoldTransactions` |
+| `GET /me/mining` | `GET /rest/v1/profiles?select=mining_started_at` | `mining.getMiningStartedAt` |
+| `POST /me/mining/collections` | `POST /rest/v1/rpc/collect_mining` | `mining.collectMining` |
 | `POST /me/gold-transactions` | `POST /rest/v1/rpc/earn_gold` | `wallet.earnGold` |
 | `POST /exchanges` | `POST /rest/v1/rpc/exchange_product` | `wallet.exchangeProduct` |
 | `GET /me/boosts` | `GET /rest/v1/boosts` | `boosts.listBoosts` |
@@ -112,7 +116,7 @@ erDiagram
 ### 3-2. 테이블
 | 테이블 | 역할 | 핵심 제약 |
 |---|---|---|
-| `profiles` | 사용자 (익명 로그인 id) | `id` = `auth.users.id` |
+| `profiles` | 사용자 (익명 로그인 id), 채굴 시작 시각(`mining_started_at`) | `id` = `auth.users.id` |
 | `offers` | 오퍼(캠페인). 홈 미션 타일 하나 = 오퍼 하나 | `tile_id` unique |
 | `offer_steps` | 단계와 단계별 보상 (채굴 속도 %) | `(offer_id, step_order)` unique |
 | `offer_participations` | 참여 (참여 중 / 완료) | `(user_id, offer_id)` unique → 한 번만 참여 |
@@ -129,7 +133,7 @@ erDiagram
 - **기한 만료는 저장하지 않는다.** `expires_at`과 지금 시각으로 계산한다
 - **출처 추적.** 속도 보상은 어느 단계 보상(`offer_step_reward_id`)에서, 금 차감 내역은 어느 교환(`exchange_id`)에서 생겼는지 가리킨다
 - **오퍼 보상은 속도만.** 10/31 첫 버전은 단계마다 금도 줬지만, 실제 앱 구조에 맞춰 마이그레이션 `20261102000000_offer_rewards_boost_only.sql`에서 금 보상 칸을 지웠다. 이미 지급된 오퍼 금 내역은 기록으로 남겨 둔다
-- 채굴 시작 시각은 기기에 둔다. 채굴량은 시작 시각과 속도 보상으로 계산하는 값이고, 서버는 적립할 때 상한만 검사한다
+- **채굴량은 서버가 계산한다.** 금은 기프티콘으로 바뀌는 값이라 앱이 보낸 금액을 믿지 않는다. 채굴 시작 시각을 `profiles.mining_started_at`에 두고, 금 줍기 때 서버 시계와 `boosts`로 계산한다 (마이그레이션 `20261102010000_server_mining.sql`). 앱은 같은 식으로 화면에 보여 줄 채굴량만 계산하고, 금 줍기 뒤 서버가 계산한 금액으로 바꾼다
 
 ### 3-3. 오퍼 상태 변화
 ```
@@ -154,10 +158,12 @@ erDiagram
 - 상한을 넘는 금 줍기 → `INVALID_AMOUNT`, 출처 위조(`offer`로 적립) → `INVALID_SOURCE`
 - 테이블 직접 쓰기 → RLS로 거절, 내부 함수 호출 → 권한 없음
 - 잔액이 상품 1개만큼일 때 교환 5번 동시 요청 → 1번만 성공, 잔액은 음수가 되지 않음
+- 금 줍기에 금액을 넣어 보내기(`earn_gold`의 mining 출처) → 거절. 채굴 시작 시각 직접 수정 → RLS로 거절
+- 2초 채굴 → 약 0.000004g, 속도 +100%면 약 2배. 상한까지 채운 뒤 동시에 5번 줍기 → 상한만큼은 1번만
 - 다른 사용자는 내 내역을 볼 수 없음
 
 ## 5. 알려진 한계
-- 채굴량은 기기에서 계산해서 보낸다. 서버는 한 번에 상한(0.000120g)을 넘는지만 검사한다
+- 화면의 채굴량(앱 시계)과 실제 지급량(서버 시계)은 조금 다를 수 있다. 지급은 서버 값이 기준이다
 - 개발자 모드(금 추가, 초기화)도 같은 API를 쓰므로, 시연이 끝나면 서버 함수에서 `dev` 출처를 막아야 한다
 - 오퍼 단계 완료는 실제 광고주 확인 대신 버튼으로 처리한다 (mock)
 - 교환 상품 화면은 앱의 상품 데이터로 그리고, 가격 검사와 차감은 서버의 `products` 표로 한다. 두 곳의 id와 가격을 같게 맞춰 두었다

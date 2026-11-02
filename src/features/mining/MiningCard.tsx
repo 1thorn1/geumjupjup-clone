@@ -16,8 +16,8 @@ function formatPercent(percent: number): string {
 }
 
 export function MiningCard() {
-  const { mined, isFull, isLoading, speedPercent, collect, undoCollect } = useMining();
-  const { earn } = useWallet();
+  const { mined, isFull, isLoading, speedPercent, collect, confirmCollect, undoCollect } = useMining();
+  const { collectMining } = useWallet();
   // 방금 주운 양. 값이 있으면 보상 팝업을 띄우고, 닫을 때까지 버튼을 막는다
   const [collected, setCollected] = useState<number | null>(null);
   // 서버 적립이 실패했을 때 안내 문장
@@ -32,13 +32,19 @@ export function MiningCard() {
     watchAd(() => {
       const result = collect();
       if (result === null) return;
-      // 낙관적 업데이트: 팝업과 잔액은 바로 보여 주고, 서버가 실패하면 되돌린다
+      // 낙관적 업데이트: 앱이 계산한 예상량으로 팝업과 잔액을 바로 보여 주고
+      // 서버가 계산한 진짜 금액이 오면 그 값으로 바꾼다. 서버가 실패하면 되돌린다
       setCollected(result.amount);
-      earn({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key }).catch((e: unknown) => {
-        undoCollect(result.startedAt); // 채굴량도 주우기 전으로
-        setCollected(null);
-        setFailure(errorMessage(e));
-      });
+      collectMining({ amount: result.amount, title: '금 줍기', source: 'mining', key: result.key })
+        .then((tx) => {
+          setCollected(tx.amount);
+          confirmCollect(Date.parse(tx.createdAt)); // 서버가 적립한 시각부터 다시 채굴
+        })
+        .catch((e: unknown) => {
+          undoCollect(result.startedAt); // 채굴량도 주우기 전으로
+          setCollected(null);
+          setFailure(errorMessage(e));
+        });
     });
   };
 
