@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/features/layout/AppHeader';
 import { COLORS } from '@/features/layout/theme';
@@ -12,6 +13,10 @@ function TabIcon({ name, focused }: { name: keyof typeof Ionicons.glyphMap; focu
 
 // 실제 앱처럼: 모든 탭 위에 공통 상단 바, 하단 탭은 아이콘만 (선택된 탭은 보라색)
 export default function TabLayout() {
+  // 안드로이드는 앱이 시스템 버튼(뒤로가기·홈) 영역 밑까지 그려진다
+  // 탭 바 높이를 고정하면 아이콘이 그 버튼과 겹치므로, 기기의 아래 여백만큼 높이를 더한다 (웹·여백 없는 기기는 0)
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -19,7 +24,7 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.muted,
-        tabBarStyle: { height: 64, backgroundColor: COLORS.surface },
+        tabBarStyle: { height: 64 + insets.bottom, backgroundColor: COLORS.surface },
       }}
     >
       <Tabs.Screen
