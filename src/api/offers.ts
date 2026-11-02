@@ -18,7 +18,6 @@ type OfferRow = {
     id: number;
     step_order: number;
     label: string;
-    reward_gold: number;
     reward_boost_percent: number;
   }[];
 };
@@ -35,7 +34,6 @@ type StepRewardRow = {
   id: number;
   step_id: number;
   status: StepReward['status'];
-  reward_gold: number;
   reward_boost_percent: number;
   pay_at: string;
 };
@@ -44,7 +42,6 @@ type PayoutRow = {
   reward_id: number;
   offer_id: string;
   offer_title: string;
-  reward_gold: number;
   reward_boost_percent: number;
 };
 
@@ -60,7 +57,6 @@ const toStepReward = (r: StepRewardRow): StepReward => ({
   id: r.id,
   stepId: r.step_id,
   status: r.status,
-  rewardGold: Number(r.reward_gold),
   rewardBoostPercent: r.reward_boost_percent,
   payAt: r.pay_at,
 });
@@ -86,7 +82,6 @@ export async function listOffers(): Promise<Offer[]> {
         id: s.id,
         order: s.step_order,
         label: s.label,
-        rewardGold: Number(s.reward_gold),
         rewardBoostPercent: s.reward_boost_percent,
       }))
       .sort((a, b) => a.order - b.order),
@@ -122,7 +117,6 @@ export async function settleRewards(): Promise<Payout[]> {
     rewardId: r.reward_id,
     offerId: r.offer_id,
     offerTitle: r.offer_title,
-    rewardGold: Number(r.reward_gold),
     rewardBoostPercent: r.reward_boost_percent,
   }));
 }

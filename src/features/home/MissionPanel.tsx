@@ -68,7 +68,7 @@ export function MissionPanel() {
           </View>
           <View style={styles.featuredBadge}>
             {/* 단계 보상을 모두 더한 값 */}
-            <Text style={styles.featuredBadgeText}>+{withComma(totalReward(featured).percent)}%</Text>
+            <Text style={styles.featuredBadgeText}>+{withComma(totalReward(featured))}%</Text>
           </View>
         </Pressable>
       ) : null}
@@ -77,7 +77,7 @@ export function MissionPanel() {
         visible={popup === 'guide'}
         icon="help-circle"
         title="채굴 속도 올리는 법"
-        message="미션을 완료하면 금과 채굴 속도를 받아요. 속도가 빠를수록 금이 더 빨리 쌓여요."
+        message="미션을 완료하면 채굴 속도가 올라가요. 속도가 빠를수록 금이 더 빨리 쌓여요."
         onClose={() => setPopup(null)}
       />
       <RewardPopup

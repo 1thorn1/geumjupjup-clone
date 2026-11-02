@@ -4,9 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '@/features/layout/theme';
 
-import { CAMPAIGN_LABEL, totalReward, type Offer } from './offer';
+import { CAMPAIGN_LABEL, rewardText, totalReward, type Offer } from './offer';
 import { useOffer, type OfferStatus } from './OfferProvider';
-import { rewardText } from './OfferScreen';
 
 const STATUS_BADGE: Record<OfferStatus, { label: string; color: string; background: string }> = {
   notJoined: { label: '참여 가능', color: '#2F6FE4', background: '#E6F0FF' },
@@ -29,7 +28,7 @@ export default function OfferListScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         refreshControl={<RefreshControl refreshing={isLoading && offers.length > 0} onRefresh={refresh} />}
         ListHeaderComponent={
-          <Text style={styles.header}>미션을 완료하면 금과 채굴 속도를 받아요. 지급은 완료 후 몇 초 뒤에 처리돼요.</Text>
+          <Text style={styles.header}>미션을 완료하면 채굴 속도가 올라가요. 지급은 완료 후 몇 초 뒤에 처리돼요.</Text>
         }
         ListEmptyComponent={
           isLoading ? (
@@ -55,7 +54,6 @@ function OfferRow({ offer }: { offer: Offer }) {
   const status = offerStatus(offer.id);
   const badge = STATUS_BADGE[status];
   const paidCount = offer.steps.filter((s) => stepStatus(s.id) === 'paid').length;
-  const total = totalReward(offer);
 
   return (
     <Pressable
@@ -72,7 +70,7 @@ function OfferRow({ offer }: { offer: Offer }) {
           {CAMPAIGN_LABEL[offer.campaignType]} · {offer.steps.length}단계
           {status === 'joined' ? ` · ${paidCount}/${offer.steps.length} 완료` : ''}
         </Text>
-        <Text style={styles.reward}>{rewardText(total.gold, total.percent)}</Text>
+        <Text style={styles.reward}>{rewardText(totalReward(offer))}</Text>
       </View>
       <View style={[styles.badge, { backgroundColor: badge.background }]}>
         <Text style={[styles.badgeText, { color: badge.color }]}>{badge.label}</Text>
